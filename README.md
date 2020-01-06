@@ -18,6 +18,8 @@ Pre-built binaries are available for the most commonly used operating systems. T
 
 ## Examples
 
+**Note: If neither `-r` nor `--file` options are specified, Foset will try to read the plain-text sessions from standard output. Usually this is not what you want.**
+
 ### default output from compressed session file
 
 If not specified otherwise, the default output format is `${default_basic} ${default_hw}, ${default_rate}, ${default_counts}`:
