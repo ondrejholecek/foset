@@ -17,7 +17,8 @@ import (
 )
 
 var mainVersion string
-var gitCommit   string
+var fosetGitCommit          string
+var fortisessionGitCommit   string
 
 var log = loggo.GetLogger("foset")
 
@@ -50,7 +51,8 @@ func main() {
 		fmt.Printf("This software is governed by the CC BY-ND 4.0 license.\n")
 		fmt.Printf("Make sure you understand the license before modifying the code!\n")
 		fmt.Printf("(https://creativecommons.org/licenses/by-nd/4.0/)\n\n")
-		fmt.Printf("Main version: %s\nCommit: %s\n", mainVersion, gitCommit)
+		fmt.Printf("Main program version: %s %s\n", mainVersion, fosetGitCommit)
+		fmt.Printf("Fortisession library: %s\n", fortisessionGitCommit)
 		os.Exit(0)
 	}
 
