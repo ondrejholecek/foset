@@ -7,6 +7,7 @@ import (
 	"github.com/akamensky/argparse"
 	"github.com/juju/loggo"
 	"strings"
+	"bufio"
 	"os"
 	"fmt"
 	"runtime"
@@ -34,6 +35,7 @@ func main() {
 	cache_save := parser.Flag(  "s", "save",     &argparse.Options{Default: false,            Help: "Only save parsed data to cache file [EXPERIMENTAL]"})
 	cache_read := parser.Flag(  "c", "cache",    &argparse.Options{Default: false,            Help: "Load session data from cached file [EXPERIMENTAL]"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
+	nobuffer   := parser.Flag(  "", "no-buffer", &argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
 	parse_all  := parser.Flag(  "", "parse-all", &argparse.Options{Default: false,            Help: "Debugging: parse all fields regardless on filter and output"})
 	profiler   := parser.String(  "", "profiler",&argparse.Options{Default: "",               Help: "Debugging: enable profiler (mem or cpu)"})
@@ -123,11 +125,11 @@ func main() {
 
 	} else if *cache_read {
 		session_cache, inerr = CacheInit(*filename + ".cache", "r", *threads)
-		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected)
+		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected, !(*nobuffer))
 		inerr = session_cache.ReadAll(parsed_sessions)
 
 	} else {
-		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected)
+		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected, !(*nobuffer))
 		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads)
 		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
 	}
@@ -151,11 +153,21 @@ func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditi
 	done <- true
 }
 
-func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, done chan bool) {
+func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, done chan bool, buffer bool) {
+	// prepare the buffer (even if it is not going to be used)
+	w := bufio.NewWriterSize(os.Stdout, 16384)
+	defer w.Flush()
+
+	//
 	for session := range results {
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
 		if conditioner != nil && !conditioner.Matches(session) { continue }
-		fmt.Println(formatter.Format(session))
+
+		if buffer {
+			w.WriteString(formatter.Format(session) + "\n")
+		} else {
+			fmt.Println(formatter.Format(session))
+		}
 	}
 	done <- true
 }
