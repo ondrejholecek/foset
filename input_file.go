@@ -59,7 +59,9 @@ func scanner_split(data []byte, atEOF bool) (advance int, token []byte, err erro
 		if nl == -1 { nl = bytes.Index(data[1:], []byte("\n\n"))   }
 		if nl == -1 { nl = bytes.Index(data[1:], []byte("\n\r\n")) }
 
-		if nl == -1 {
+		if nl == -1 && atEOF {
+			return len(data), data[1:], nil
+		} else if nl == -1 {
 			return 0, nil, nil
 		} else {
 			return 1+nl, data[1:nl], nil
