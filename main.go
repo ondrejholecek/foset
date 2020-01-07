@@ -35,7 +35,7 @@ func main() {
 	cache_save := parser.Flag(  "s", "save",     &argparse.Options{Default: false,            Help: "Only save parsed data to cache file [EXPERIMENTAL]"})
 	cache_read := parser.Flag(  "c", "cache",    &argparse.Options{Default: false,            Help: "Load session data from cached file [EXPERIMENTAL]"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
-	nobuffer   := parser.Flag(  "", "no-buffer", &argparse.Options{Default: false,            Help: "Disable output buffering"})
+	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
 	parse_all  := parser.Flag(  "", "parse-all", &argparse.Options{Default: false,            Help: "Debugging: parse all fields regardless on filter and output"})
 	profiler   := parser.String(  "", "profiler",&argparse.Options{Default: "",               Help: "Debugging: enable profiler (mem or cpu)"})
@@ -155,8 +155,7 @@ func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditi
 
 func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, done chan bool, buffer bool) {
 	// prepare the buffer (even if it is not going to be used)
-	w := bufio.NewWriterSize(os.Stdout, 16384)
-	defer w.Flush()
+	w := bufio.NewWriterSize(os.Stdout, 1024)
 
 	//
 	for session := range results {
@@ -169,6 +168,8 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 			fmt.Println(formatter.Format(session))
 		}
 	}
+
+	w.Flush()
 	done <- true
 }
 
