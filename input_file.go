@@ -60,11 +60,11 @@ func scanner_split(data []byte, atEOF bool) (advance int, token []byte, err erro
 		if nl == -1 { nl = bytes.Index(data[1:], []byte("\n\r\n")) }
 
 		if nl == -1 && atEOF {
-			return len(data), data[1:], nil
+			return len(data), data, nil
 		} else if nl == -1 {
 			return 0, nil, nil
 		} else {
-			return 1+nl, data[1:nl], nil
+			return 1+nl, data[:nl], nil
 		}
 	} else if n > 0 {
 		// find start of the next session, return this one and shift pointer to the start of next one
@@ -122,7 +122,16 @@ func (state *FileProcessing) Read_all_from_file(filename string, compression Com
 		reader = tmp
 	}
 
-	scanner := bufio.NewScanner(reader)
+	// add new line at the beggining
+	// This is a little workaround because the scanner_split function
+	// expects the string "session info:" to be preceded by a new line.
+	// This worked well unless the "session info:" was at the very
+	// beggining of the file. It also didn't work for copy & paste
+	// session on stdin.
+	newline := bytes.NewReader([]byte("\n"))
+	multireader := io.MultiReader(newline, reader)
+
+	scanner := bufio.NewScanner(multireader)
 	scanner.Split(scanner_split)
 	buf := list.New()
 
