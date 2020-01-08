@@ -1,4 +1,4 @@
-MAIN_VERSION=1.3
+MAIN_VERSION=1.4
 FOSET_GIT_COMMIT := $(shell git rev-list -1 HEAD)
 FORTISESSION_GIT_COMMIT := $(shell cd ../fortisession/; git rev-list -1 HEAD)
 LDFLAGS=-ldflags="-s -w -X main.fosetGitCommit=$(FOSET_GIT_COMMIT) -X main.fortisessionGitCommit=$(FORTISESSION_GIT_COMMIT) -X main.mainVersion=$(MAIN_VERSION)"
