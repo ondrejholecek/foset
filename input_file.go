@@ -38,19 +38,25 @@ func process_sessions(results chan *fortisession.Session, req *fortisession.Sess
 }
 
 func scanner_split(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	log.Tracef("scanner_split data: %s\n---\n", string(data))
 	// are we at the start of a new session?
 	// if yes (i==0) ok, do the rest
 	// else either ask for bigger buffer (i==-1)
 	// or shift to the start that we have just found (i>0)
-	i := bytes.Index(data, []byte("\nsession info:"))
+	session_start_data := []byte("\nsession info:")
+	i := bytes.Index(data, session_start_data)
 	if i == -1 {
-		return 0, nil, nil
+		if len(session_start_data) > len(data) {
+			return 0, nil, nil
+		} else {
+			return len(data)-len(session_start_data), nil, nil
+		}
 	} else if i > 0  {
 		return i, nil, nil
 	}
 
 	// to find the end of this session data, easiest way it to find the beginning of the next session data
-	n := bytes.Index(data[1:], []byte("\nsession info:"))
+	n := bytes.Index(data[1:], session_start_data)
 	if n == -1 {
 		// if we don't have next session info, it can mean two things:
 		// 1) the buffer we are inspecting is not big enough - return 0,nil,nil to signalize it to Scanner
