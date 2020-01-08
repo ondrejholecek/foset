@@ -49,12 +49,13 @@ func main() {
 		fmt.Printf("----------------------\n")
 		fmt.Printf("FOrtigate SEssion Tool\n")
 		fmt.Printf("----------------------\n")
-		fmt.Printf("Written by Ondrej Holecek <ondrej@holecek.eu>\n\n")
+		fmt.Printf("Written by Ondrej Holecek <ondrej@holecek.eu>\n")
+		fmt.Printf("Version: %s\n\n", mainVersion)
 		fmt.Printf("This software is governed by the CC BY-ND 4.0 license.\n")
 		fmt.Printf("Make sure you understand the license before modifying the code!\n")
 		fmt.Printf("(https://creativecommons.org/licenses/by-nd/4.0/)\n\n")
-		fmt.Printf("Main program version: %s %s\n", mainVersion, fosetGitCommit)
-		fmt.Printf("Fortisession library: %s\n", fortisessionGitCommit)
+		fmt.Printf("Main program         : %s\n", fosetGitCommit)
+		fmt.Printf("Fortisession library : %s\n", fortisessionGitCommit)
 		os.Exit(0)
 	}
 
