@@ -28,7 +28,7 @@ func main() {
 	parser := argparse.NewParser("foset", "Parses the FortiOS session list. Written by Ondrej Holecek <oholecek@fortinet.com>.")
 	version    := parser.Flag(  "v", "version",  &argparse.Options{Default: false,            Help: "Print current version"})
 	filename   := parser.String("r", "file",     &argparse.Options{Default: "",               Help: "File containing the session list"})
-	output     := parser.String("o", "output",   &argparse.Options{Default: "${default_basic} ${default_hw}, ${default_rate}, ${default_counts}", Help: "Format of the output"})
+	output     := parser.String("o", "output",   &argparse.Options{Default: "${default_basic}", Help: "Format of the output"})
 	filter     := parser.String("f", "filter",   &argparse.Options{Default: "",               Help: "Show only sessions matching filter"})
 	external   := parser.List  ("e", "external", &argparse.Options{                           Help: "Load additional data from external file (see documentation)"})
 	debug      := parser.Flag(  "d", "debug",    &argparse.Options{Default: false,            Help: "Print also debugging outputs"})
