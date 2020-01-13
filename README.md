@@ -391,3 +391,74 @@ $ foset -r /tmp/sessions.gz -g -o '${rate[d]:010d|bps} ${serial:08x} ${sdap:-45s
 
 Notice that the field `${rate}` is used twice on the same line: First at the very beginning of the line in plain number format as bit per second - which is used only for `sort` command, and then at the end of the line in default string format "auto-scaling" and including the units - which is intended for the user reading the output.
 
+
+## External file
+
+It is possible to use data from external (text) file as conditions in the session filter. 
+
+One or more external files can be loaded using `-e` parameter which value is composed of three or more fields divided by `|`. First field is the name of the external file, second is the delimiter and third and more are field names. (Only) one field name must be in parenthesis which signilizes that this is the key field name - session field to external file matching can be done only using the key field and not by any other fields. In the later expressions or output string the other field names can be used too.
+
+### show only sessions listed in the external file
+
+Matching can only be done using the basic format - numbers in decadic or strings. This might be confusing when matching the session serial numbers because the external file must use quite uncommon representation:
+
+```
+$ cat /tmp/external
+1761325808 field_a1 field_a2
+1761586796 field_b1 field_b2
+```
+
+```
+$ foset -r /tmp/session -e '/tmp/external| |(extsession)' -f 'serial match extsession' -o '${default_basic} (${serial:d})'
+68ffae6c:   0/45    UDP         SEEN/UNSEEN      10.109.19.29:59648    -> 62.209.40.73:53       (1761586796)
+68fbb2f0:   0/45    UDP         SEEN/UNSEEN      10.109.16.20:23316    -> 65.210.95.239:8888    (1761325808)
+```
+
+### display also custom variables for matching lines
+
+Notice also the updated value of `-e` parameter - we gave names also to the other two columns and then used them in the output string:
+
+```
+$ foset -r /tmp/session -e '/tmp/external| |(extsession)|some1|some2' -f 'serial match extsession' -o '${default_basic} (${serial:d}) ${custom|some1} ${custom|some2}'
+ 68ffae6c:   0/45    UDP         SEEN/UNSEEN      10.109.19.29:59648    -> 62.209.40.73:53       (1761586796) field_b1 field_b2
+ 68fbb2f0:   0/45    UDP         SEEN/UNSEEN      10.109.16.20:23316    -> 65.210.95.239:8888    (1761325808) field_a1 field_a2
+```
+
+### filter based on the custom variables
+
+```
+$ foset -r /tmp/session -e '/tmp/external| |(extsession)|some1|some2' -f 'serial match extsession and custom some1 = field_a1' -o '${default_basic} (${serial:d}) ${custom|some1} ${custom|some2}'
+68fbb2f0:   0/45    UDP         SEEN/UNSEEN      10.109.16.20:23316    -> 65.210.95.239:8888    (1761325808) field_a1 field_a2
+```
+
+Using the custom fields in filter string is only possible *after* the `match` expression:
+
+```
+$ foset -r /tmp/session -e '/tmp/external| |(extsession)|some1|some2' -f 'custom some1 = field_a1 and serial match extsession' -o '${default_basic} (${serial:d}) ${custom|some1} ${custom|some2}'
+```
+
+### listing the session that disappeared between two session lists
+
+The idea here is following:
+- To the auxiliary file dump the serial numbers (in decadic) of the later session list.
+- Then from the former session list show only those sessions that cannot find match to any session in the auxiliary file - ie. sessions in the former list that are not present in the later list.
+
+```
+$ foset -r /tmp/second -o '${serial:d}' >/tmp/second_serials
+```
+
+```
+$ cat /tmp/second_serials
+4071590
+4071523
+1315254
+4071476
+4071564
+[...]
+```
+
+```
+$ foset -r /tmp/first -e '/tmp/second_serials||(newid)' -f 'serial !match newid' -o '${default_basic}'
+003e207d:   0/i     TCP         NONE/ESTABLISHED 10.109.63.254:55169   -> 10.109.48.215:22
+003e2062:   0/1     ICMP           0/0           10.1.1.20:3164        -> 10.254.1.15:8
+```
