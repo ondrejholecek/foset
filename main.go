@@ -87,8 +87,10 @@ func main() {
 	// external (additional) data
 	var custom_data []*forticonditioner.CustomData
 	for _, e := range *external {
+		log.Debugf("Loading external data \"%s\"", e)
 		custom_data = append(custom_data, load_external(e))
 		data_request.Custom = true
+		log.Debugf("Done")
 	}
 
 	//
