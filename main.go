@@ -172,7 +172,11 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 	//
 	for session := range results {
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
-		if conditioner != nil && !conditioner.Matches(session) { continue }
+		if conditioner != nil && !conditioner.Matches(session) { continue }  // this seems to hit some bug in Go where memory start being shifted like hell
+		                                                                     // and the program runs incredibly slow (because of garbage collectors (??) )
+		                                                                     // ... it happens only when customdata (-e) are used
+		                                                                     // ... it is not just this call, but also some nested calls
+		                                                                     // TODO: fix
 
 		if buffer {
 			w.WriteString(formatter.Format(session) + "\n")
