@@ -48,13 +48,18 @@ func load_external_plugin(s string, data_request *fortisession.SessionDataReques
 		return nil, fmt.Errorf("Cannot find \"InitPlugin\" function in plugin: %s", err)
 	}
 
-	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest)(map[string]func(*fortisession.Session)(bool)))
+	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest)(map[string]func(*fortisession.Session)(bool),error))
 	if !ok {
 		return nil, fmt.Errorf("Cannot verify type of \"InitPlugin\" function")
 	}
 
 	// init returns functions of the plugin
-	for k, v := range pfinit(data, data_request) {
+	refs, err := pfinit(data, data_request)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot initialize plugin: %s", err)
+	}
+
+	for k, v := range refs {
 		if k == "beforeFilter" { pi.beforeFilter = v
 		} else if k == "afterFilter"  { pi.afterFilter = v
 		} else if k == "end"          { pi.end = v
