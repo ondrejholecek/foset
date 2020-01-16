@@ -35,6 +35,7 @@ func main() {
 	gzip_in    := parser.Flag(  "g", "gzip",     &argparse.Options{Default: false,            Help: "Enable if input is gzip compressed"})
 	cache_save := parser.Flag(  "s", "save",     &argparse.Options{Default: false,            Help: "Only save parsed data to cache file [EXPERIMENTAL]"})
 	cache_read := parser.Flag(  "c", "cache",    &argparse.Options{Default: false,            Help: "Load session data from cached file [EXPERIMENTAL]"})
+	plugin_ext := parser.List(  "P", "external-plugin", &argparse.Options{                    Help: "Load external plugin library"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
@@ -84,6 +85,20 @@ func main() {
 	//
 	data_request := fortisession.SessionDataRequest {}
 
+	// external plugin
+	plugins := make([]*pluginInfo, 0)
+
+	for _, p := range *plugin_ext {
+		log.Debugf("Loading external plugin\"%s\"", p)
+		pinfo, err := load_external_plugin(p, &data_request)
+		if err != nil {
+			log.Criticalf("Cannot load plugin: %s", err)
+			os.Exit(100)
+		}
+		plugins = append(plugins, pinfo)
+		log.Debugf("Done")
+	}
+
 	// external (additional) data
 	var custom_data []*forticonditioner.CustomData
 	for _, e := range *external {
@@ -131,17 +146,17 @@ func main() {
 	if *cache_save {
 		session_cache, inerr = CacheInit(*filename + ".cache", "w", *threads)
 		data_request.Plain = false
-		go save_sessions(parsed_sessions, session_cache, conditioner, all_sessions_collected)
+		go save_sessions(parsed_sessions, session_cache, conditioner, plugins, all_sessions_collected)
 		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads)
 		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
 
 	} else if *cache_read {
 		session_cache, inerr = CacheInit(*filename + ".cache", "r", *threads)
-		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected, !(*nobuffer))
+		go collect_sessions(parsed_sessions, formatter, conditioner, plugins, all_sessions_collected, !(*nobuffer))
 		inerr = session_cache.ReadAll(parsed_sessions)
 
 	} else {
-		go collect_sessions(parsed_sessions, formatter, conditioner, all_sessions_collected, !(*nobuffer))
+		go collect_sessions(parsed_sessions, formatter, conditioner, plugins, all_sessions_collected, !(*nobuffer))
 		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads)
 		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
 	}
@@ -157,26 +172,33 @@ func main() {
 }
 
 
-func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditioner *forticonditioner.Condition, done chan bool) {
+func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditioner *forticonditioner.Condition, plugins []*pluginInfo, done chan bool) {
 	for session := range results {
+		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
 		if conditioner != nil && !conditioner.Matches(session) { continue }
+		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 		cache.Write(session)
 	}
+	run_plugins(plugins, PLUGINS_END, nil)
 	done <- true
 }
 
-func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, done chan bool, buffer bool) {
+func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*pluginInfo, done chan bool, buffer bool) {
 	// prepare the buffer (even if it is not going to be used)
 	w := bufio.NewWriterSize(os.Stdout, 1024)
 
 	//
 	for session := range results {
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
+
+		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
+
 		if conditioner != nil && !conditioner.Matches(session) { continue }  // this seems to hit some bug in Go where memory start being shifted like hell
 		                                                                     // and the program runs incredibly slow (because of garbage collectors (??) )
 		                                                                     // ... it happens only when customdata (-e) are used
 		                                                                     // ... it is not just this call, but also some nested calls
 		                                                                     // TODO: fix
+		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
 		if buffer {
 			w.WriteString(formatter.Format(session) + "\n")
@@ -186,6 +208,7 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 	}
 
 	w.Flush()
+	run_plugins(plugins, PLUGINS_END, nil)
 	done <- true
 }
 
