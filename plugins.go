@@ -8,6 +8,8 @@ import (
 	"fortisession"
 	"strings"
 	"plugin"
+	"os"
+	"path"
 )
 
 type pluginInfo struct {
@@ -23,41 +25,36 @@ const (
 )
 
 func load_external_plugin(s string, data_request *fortisession.SessionDataRequest) (*pluginInfo, error) {
-	var path, data string
+	var pluginspec, data string
 	var err error
 	var pi pluginInfo
 
-	// plugin path is the string before |, data the string after
+	// plugin pluginspec is the string before |, data the string after
 	d := strings.Index(s, "|")
 	if d == -1 {
-		path = s
+		pluginspec = s
 		data = ""
 	} else {
-		path = s[:d]
+		pluginspec = s[:d]
 		data = s[d+1:]
 	}
 
 	// plugin file
-	p, err := plugin.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot load plugin file: %s", err)
-	}
+	filename, err := search_plugin(pluginspec)
+	if err != nil { return nil, fmt.Errorf("cannot local plugin file: %s", err) }
+
+	p, err := plugin.Open(filename)
+	if err != nil { return nil, fmt.Errorf("cannot load plugin file: %s", err) }
 
 	pf, err := p.Lookup("InitPlugin")
-	if err != nil {
-		return nil, fmt.Errorf("Cannot find \"InitPlugin\" function in plugin: %s", err)
-	}
+	if err != nil { return nil, fmt.Errorf("cannot find \"InitPlugin\" function in plugin: %s", err) }
 
 	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest)(map[string]func(*fortisession.Session)(bool),error))
-	if !ok {
-		return nil, fmt.Errorf("Cannot verify type of \"InitPlugin\" function")
-	}
+	if !ok { return nil, fmt.Errorf("cannot verify type of \"InitPlugin\" function") }
 
 	// init returns functions of the plugin
 	refs, err := pfinit(data, data_request)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot initialize plugin: %s", err)
-	}
+	if err != nil { return nil, fmt.Errorf("cannot initialize plugin: %s", err) }
 
 	for k, v := range refs {
 		if k == "beforeFilter" { pi.beforeFilter = v
@@ -84,4 +81,25 @@ func run_plugins(plugins []*pluginInfo, place int, session *fortisession.Session
 	}
 
 	return ignore
+}
+
+func search_plugin(s string) (string, error) {
+	// if s starts with "/", we expect the full and exact path
+	if s[0] == '/' { return s, nil }
+
+	// otherwise we expect just a name of the plugin without .so at the end
+	// and path is in "FOSET_PLUGINS" env, paths divided by ":"
+	// of it is empty, default is $HOME/.foset/plugins
+	env := os.Getenv("FOSET_PLUGINS")
+	if len(env) == 0 { env = path.Join(os.Getenv("HOME"), ".foset", "plugins") }
+	for _, dir := range strings.Split(env, ":") {
+		fullname := path.Join(dir, s + ".so")
+		log.Debugf("Checking for plugin in \"%s\"", fullname)
+		_, staterr := os.Stat(fullname)
+		if staterr != nil { continue }
+		return fullname, nil
+	}
+
+	// not found, return error
+	return "", fmt.Errorf("plugin not found")
 }
