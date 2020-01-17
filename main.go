@@ -31,7 +31,6 @@ func main() {
 	filename   := parser.String("r", "file",     &argparse.Options{Default: "",               Help: "File containing the session list"})
 	output     := parser.String("o", "output",   &argparse.Options{Default: "${default_basic}", Help: "Format of the output"})
 	filter     := parser.String("f", "filter",   &argparse.Options{Default: "",               Help: "Show only sessions matching filter"})
-	external   := parser.List  ("e", "external", &argparse.Options{                           Help: "Load additional data from external file (see documentation)"})
 	debug      := parser.Flag(  "d", "debug",    &argparse.Options{Default: false,            Help: "Print also debugging outputs"})
 	gzip_in    := parser.Flag(  "g", "gzip",     &argparse.Options{Default: false,            Help: "Enable if input is gzip compressed"})
 	cache_save := parser.Flag(  "s", "save",     &argparse.Options{Default: false,            Help: "Only save parsed data to cache file [EXPERIMENTAL]"})
@@ -114,15 +113,6 @@ func main() {
 		log.Debugf("Done")
 	}
 
-	// external (additional) data
-	var custom_data []*forticonditioner.CustomData
-	for _, e := range *external {
-		log.Debugf("Loading external data \"%s\"", e)
-		custom_data = append(custom_data, load_external(e))
-		data_request.Custom = true
-		log.Debugf("Done")
-	}
-
 	//
 	formatter, err := fortiformatter.Init(*output, &data_request)
 	if err != nil {
@@ -133,7 +123,7 @@ func main() {
 
 	var conditioner *forticonditioner.Condition = nil
 	if len(*filter) > 0 {
-		conditioner = forticonditioner.Init(*filter, &data_request, custom_data)
+		conditioner = forticonditioner.Init(*filter, &data_request)
 	}
 	log.Debugf("Parser request struct after conditioner init: %#v", data_request)
 
@@ -207,12 +197,7 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
 
 		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
-
-		if conditioner != nil && !conditioner.Matches(session) { continue }  // this seems to hit some bug in Go where memory start being shifted like hell
-		                                                                     // and the program runs incredibly slow (because of garbage collectors (??) )
-		                                                                     // ... it happens only when customdata (-e) are used
-		                                                                     // ... it is not just this call, but also some nested calls
-		                                                                     // TODO: fix
+		if conditioner != nil && !conditioner.Matches(session) { continue }
 		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
 		if buffer {
@@ -225,65 +210,4 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 	w.Flush()
 	run_plugins(plugins, PLUGINS_FINISHED, nil)
 	done <- true
-}
-
-func load_external(external string) (*forticonditioner.CustomData) {
-	var custom forticonditioner.CustomData
-	custom.Data = make(map[string][]string)
-
-	// format: filename
-	// or    : filename|delimiter|(keyfield)|other1|other2
-	// or    : filename|delimiter|other1|(keyfield)|other2
-	// etc...
-	parts := strings.Split(external, "|")
-	var filename   string     = parts[0]
-	var delimiter  string
-	var key        int
-
-	if len(parts) >= 2 {
-		delimiter         = parts[1]
-		custom.FieldNames = parts[2:]
-	}
-
-	// for scanning in later code this cannot be empty
-	if len(delimiter) == 0 { delimiter = " " }
-
-	// find key name and remove parethesis
-	for i, fieldName := range custom.FieldNames {
-		if !strings.HasPrefix(fieldName, "(") || !strings.HasSuffix(fieldName, ")") { continue }
-		custom.KeyName       = fieldName[1:len(fieldName)-1]
-		custom.FieldNames[i] = custom.KeyName
-		key                  = i
-	}
-
-	// we need a key name..
-	if len(custom.KeyName) == 0 {
-		log.Criticalf("External file specification does not contain a key field")
-		os.Exit(1)
-	}
-
-	log.Tracef("External file: [%s], delimiter: [%s], key: [%s], fieds: [%f]\n", filename, delimiter, custom.KeyName, custom.FieldNames)
-
-	// open the file
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Criticalf("Unable to open external file: %s", err)
-		os.Exit(1)
-	}
-
-	// fill the data
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line  := scanner.Text()
-		parts := strings.Split(line, delimiter)
-
-		if len(custom.FieldNames) > len(parts) {
-			log.Criticalf("External file does not have enough parts: \"%s\"", line)
-			os.Exit(1)
-		}
-
-		custom.Data[parts[key]] = parts
-	}
-
-	return &custom
 }
