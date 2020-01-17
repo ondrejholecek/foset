@@ -11,8 +11,7 @@
 *.out
 
 # Vim
-*.swp
-*.swo
+*.sw[a-p]
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
