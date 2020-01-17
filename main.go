@@ -36,6 +36,7 @@ func main() {
 	cache_save := parser.Flag(  "s", "save",     &argparse.Options{Default: false,            Help: "Only save parsed data to cache file [EXPERIMENTAL]"})
 	cache_read := parser.Flag(  "c", "cache",    &argparse.Options{Default: false,            Help: "Load session data from cached file [EXPERIMENTAL]"})
 	plugin_ext := parser.List(  "P", "external-plugin", &argparse.Options{                    Help: "Load external plugin library"})
+	plugin_int := parser.List(  "p", "internal-plugin", &argparse.Options{                    Help: "Load internal plugin"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
@@ -85,14 +86,28 @@ func main() {
 	//
 	data_request := fortisession.SessionDataRequest {}
 
-	// external plugin
+	// plugins - generic
 	plugins := make([]*pluginInfo, 0)
 
+	// plugins - external
 	for _, p := range *plugin_ext {
-		log.Debugf("Loading external plugin\"%s\"", p)
+		log.Debugf("Loading external plugin \"%s\"", p)
 		pinfo, err := load_external_plugin(p, &data_request)
 		if err != nil {
-			log.Criticalf("Cannot load plugin: %s", err)
+			log.Criticalf("Cannot load external plugin: %s", err)
+			os.Exit(100)
+		}
+		plugins = append(plugins, pinfo)
+		log.Debugf("Done")
+	}
+
+	// plugins - internal
+	init_internal_plugins()
+	for _, p := range *plugin_int {
+		log.Debugf("Loading internal plugin \"%s\"", p)
+		pinfo, err := load_internal_plugin(p, &data_request)
+		if err != nil {
+			log.Criticalf("Cannot load internal plugin: %s", err)
 			os.Exit(100)
 		}
 		plugins = append(plugins, pinfo)

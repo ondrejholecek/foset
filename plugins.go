@@ -10,6 +10,8 @@ import (
 	"plugin"
 	"os"
 	"path"
+	// internal plugins:
+	"foset/plugins/merge"
 )
 
 type pluginInfo struct {
@@ -24,6 +26,9 @@ const (
 	PLUGINS_END
 )
 
+// ************************
+// *** external plugins ***
+// ************************
 func load_external_plugin(s string, data_request *fortisession.SessionDataRequest) (*pluginInfo, error) {
 	var pluginspec, data string
 	var err error
@@ -54,7 +59,7 @@ func load_external_plugin(s string, data_request *fortisession.SessionDataReques
 
 	// init returns functions of the plugin
 	refs, err := pfinit(data, data_request)
-	if err != nil { return nil, fmt.Errorf("cannot initialize plugin: %s", err) }
+	if err != nil { return nil, fmt.Errorf("cannot initialize external plugin: %s", err) }
 
 	for k, v := range refs {
 		if k == "beforeFilter" { pi.beforeFilter = v
@@ -66,21 +71,6 @@ func load_external_plugin(s string, data_request *fortisession.SessionDataReques
 	}
 
 	return &pi, nil
-}
-
-func run_plugins(plugins []*pluginInfo, place int, session *fortisession.Session) bool {
-	var ignore bool
-
-	for _, plugin := range plugins {
-		var r bool
-		if        place == PLUGINS_BEFORE_FILTER && plugin.beforeFilter != nil { r = plugin.beforeFilter(session)
-		} else if place == PLUGINS_AFTER_FILTER  && plugin.afterFilter  != nil { r = plugin.afterFilter(session)
-		} else if place == PLUGINS_END           && plugin.end          != nil { r = plugin.end(session)
-		}
-		if r == true { ignore = true }
-	}
-
-	return ignore
 }
 
 func search_plugin(s string) (string, error) {
@@ -102,4 +92,66 @@ func search_plugin(s string) (string, error) {
 
 	// not found, return error
 	return "", fmt.Errorf("plugin not found")
+}
+
+// ************************
+// *** internal plugins ***
+// ************************
+
+func init_internal_plugins() {
+}
+
+func load_internal_plugin(s string, data_request *fortisession.SessionDataRequest) (*pluginInfo, error) {
+	var pluginspec, data string
+	var err error
+	var pi pluginInfo
+
+	// plugin pluginspec is the string before |, data the string after
+	d := strings.Index(s, "|")
+	if d == -1 {
+		pluginspec = s
+		data = ""
+	} else {
+		pluginspec = s[:d]
+		data = s[d+1:]
+	}
+
+	var refs map[string]func(*fortisession.Session)(bool)
+
+	if pluginspec == "merge" {
+		refs, err = plugin_merge.InitPlugin(data, data_request)
+	} else {
+		return nil, fmt.Errorf("unknown internal plugin: %s", pluginspec)
+	}
+
+	if err != nil { return nil, fmt.Errorf("cannot initialize internal plugin: %s", err) }
+
+	for k, v := range refs {
+		if k == "beforeFilter" { pi.beforeFilter = v
+		} else if k == "afterFilter"  { pi.afterFilter = v
+		} else if k == "end"          { pi.end = v
+		} else {
+			log.Warningf("Internal plugin \"%s\" uses unknown trap \"%s\"", s, k)
+		}
+	}
+
+	return &pi, nil
+}
+
+// ********************************
+// *** generic plugin functions ***
+// ********************************
+func run_plugins(plugins []*pluginInfo, place int, session *fortisession.Session) bool {
+	var ignore bool
+
+	for _, plugin := range plugins {
+		var r bool
+		if        place == PLUGINS_BEFORE_FILTER && plugin.beforeFilter != nil { r = plugin.beforeFilter(session)
+		} else if place == PLUGINS_AFTER_FILTER  && plugin.afterFilter  != nil { r = plugin.afterFilter(session)
+		} else if place == PLUGINS_END           && plugin.end          != nil { r = plugin.end(session)
+		}
+		if r == true { ignore = true }
+	}
+
+	return ignore
 }
