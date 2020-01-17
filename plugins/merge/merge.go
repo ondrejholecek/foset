@@ -1,3 +1,6 @@
+// Copyright 2020 Ondrej Holecek <ondrej@holecek.eu>. All rights reserved. Use of this source code
+// is governed by the CC BY-ND 4.0 license that can be found in the LICENSE.txt file.
+
 package plugin_merge
 
 import (
@@ -16,8 +19,11 @@ var log loggo.Logger
 var global_data_fields   map[uint64][]string
 var global_data_columns  []string
 
-func InitPlugin(data string, data_request *fortisession.SessionDataRequest) ( map[string]func(*fortisession.Session)(bool), error) {
+func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
+	// setup logging
+	log = custom_log.Child("merge")
 
+	// parse data parameters
 	defaults := make(map[string]string)
 	defaults["sep"] = " "
 	defaults["file"] = ""
@@ -74,10 +80,15 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest) ( ma
 	data_request.Custom     = true
 	data_request.Serial     = true
 
-	fces := make(map[string]func(*fortisession.Session)(bool))
-	fces["beforeFilter"] = ProcessSession
+	// setup callbacks
+	var hooks plugin_common.Hooks
+	hooks.BeforeFilter = ProcessSession
 
-	return fces, nil
+	var pluginInfo plugin_common.FosetPlugin
+	pluginInfo.Hooks = hooks
+
+	//
+	return &pluginInfo, nil
 }
 
 func ProcessSession(session *fortisession.Session) bool {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"fmt"
 	"runtime"
+	"foset/plugins/common"
 	"fortisession"
 	"fortisession/fortiformatter"
 	"fortisession/forticonditioner"
@@ -87,7 +88,7 @@ func main() {
 	data_request := fortisession.SessionDataRequest {}
 
 	// plugins - generic
-	plugins := make([]*pluginInfo, 0)
+	plugins := init_plugins()
 
 	// plugins - external
 	for _, p := range *plugin_ext {
@@ -102,7 +103,6 @@ func main() {
 	}
 
 	// plugins - internal
-	init_internal_plugins()
 	for _, p := range *plugin_int {
 		log.Debugf("Loading internal plugin \"%s\"", p)
 		pinfo, err := load_internal_plugin(p, &data_request)
@@ -187,18 +187,18 @@ func main() {
 }
 
 
-func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditioner *forticonditioner.Condition, plugins []*pluginInfo, done chan bool) {
+func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool) {
 	for session := range results {
 		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
 		if conditioner != nil && !conditioner.Matches(session) { continue }
 		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 		cache.Write(session)
 	}
-	run_plugins(plugins, PLUGINS_END, nil)
+	run_plugins(plugins, PLUGINS_FINISHED, nil)
 	done <- true
 }
 
-func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*pluginInfo, done chan bool, buffer bool) {
+func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool, buffer bool) {
 	// prepare the buffer (even if it is not going to be used)
 	w := bufio.NewWriterSize(os.Stdout, 1024)
 
@@ -223,7 +223,7 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 	}
 
 	w.Flush()
-	run_plugins(plugins, PLUGINS_END, nil)
+	run_plugins(plugins, PLUGINS_FINISHED, nil)
 	done <- true
 }
 

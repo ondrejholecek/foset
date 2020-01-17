@@ -10,39 +10,26 @@ import (
 	"plugin"
 	"os"
 	"path"
+	"github.com/juju/loggo"
+	"foset/plugins/common"
 	// internal plugins:
 	"foset/plugins/merge"
 )
 
-type pluginInfo struct {
-	beforeFilter   func(*fortisession.Session)(bool)
-	afterFilter    func(*fortisession.Session)(bool)
-	end            func(*fortisession.Session)(bool)
-}
-
+type pluginHook int
 const (
-	PLUGINS_BEFORE_FILTER         = iota
+	PLUGINS_BEFORE_FILTER       pluginHook = iota
 	PLUGINS_AFTER_FILTER
-	PLUGINS_END
+	PLUGINS_FINISHED
 )
 
 // ************************
 // *** external plugins ***
 // ************************
-func load_external_plugin(s string, data_request *fortisession.SessionDataRequest) (*pluginInfo, error) {
-	var pluginspec, data string
+func load_external_plugin(s string, data_request *fortisession.SessionDataRequest) (*plugin_common.FosetPlugin, error) {
 	var err error
-	var pi pluginInfo
 
-	// plugin pluginspec is the string before |, data the string after
-	d := strings.Index(s, "|")
-	if d == -1 {
-		pluginspec = s
-		data = ""
-	} else {
-		pluginspec = s[:d]
-		data = s[d+1:]
-	}
+	pluginspec, data := split_plugin_name_data(s)
 
 	// plugin file
 	filename, err := search_plugin(pluginspec)
@@ -54,23 +41,18 @@ func load_external_plugin(s string, data_request *fortisession.SessionDataReques
 	pf, err := p.Lookup("InitPlugin")
 	if err != nil { return nil, fmt.Errorf("cannot find \"InitPlugin\" function in plugin: %s", err) }
 
-	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest)(map[string]func(*fortisession.Session)(bool),error))
+	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest, loggo.Logger)(*plugin_common.FosetPlugin, error))
 	if !ok { return nil, fmt.Errorf("cannot verify type of \"InitPlugin\" function") }
 
 	// init returns functions of the plugin
-	refs, err := pfinit(data, data_request)
-	if err != nil { return nil, fmt.Errorf("cannot initialize external plugin: %s", err) }
-
-	for k, v := range refs {
-		if k == "beforeFilter" { pi.beforeFilter = v
-		} else if k == "afterFilter"  { pi.afterFilter = v
-		} else if k == "end"          { pi.end = v
-		} else {
-			log.Warningf("External plugin \"%s\" uses unknown trap \"%s\"", s, k)
-		}
+	var pluginInfo *plugin_common.FosetPlugin
+	pluginInfo, err = pfinit(data, data_request, log.Child("eplugin"))
+	if err != nil {
+		return nil, fmt.Errorf("cannot initialize external plugin: %s", err)
 	}
 
-	return &pi, nil
+	//
+	return pluginInfo, nil
 }
 
 func search_plugin(s string) (string, error) {
@@ -98,60 +80,60 @@ func search_plugin(s string) (string, error) {
 // *** internal plugins ***
 // ************************
 
-func init_internal_plugins() {
-}
-
-func load_internal_plugin(s string, data_request *fortisession.SessionDataRequest) (*pluginInfo, error) {
-	var pluginspec, data string
+func load_internal_plugin(s string, data_request *fortisession.SessionDataRequest) (*plugin_common.FosetPlugin, error) {
 	var err error
-	var pi pluginInfo
+	pluginspec, data := split_plugin_name_data(s)
 
-	// plugin pluginspec is the string before |, data the string after
-	d := strings.Index(s, "|")
-	if d == -1 {
-		pluginspec = s
-		data = ""
-	} else {
-		pluginspec = s[:d]
-		data = s[d+1:]
-	}
-
-	var refs map[string]func(*fortisession.Session)(bool)
+	// run init and get plugin info
+	var pluginInfo *plugin_common.FosetPlugin
 
 	if pluginspec == "merge" {
-		refs, err = plugin_merge.InitPlugin(data, data_request)
+		pluginInfo, err = plugin_merge.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else {
 		return nil, fmt.Errorf("unknown internal plugin: %s", pluginspec)
 	}
 
-	if err != nil { return nil, fmt.Errorf("cannot initialize internal plugin: %s", err) }
-
-	for k, v := range refs {
-		if k == "beforeFilter" { pi.beforeFilter = v
-		} else if k == "afterFilter"  { pi.afterFilter = v
-		} else if k == "end"          { pi.end = v
-		} else {
-			log.Warningf("Internal plugin \"%s\" uses unknown trap \"%s\"", s, k)
-		}
+	if err != nil {
+		return nil, fmt.Errorf("cannot initialize internal plugin: %s", err)
 	}
 
-	return &pi, nil
+	return pluginInfo, nil
 }
 
 // ********************************
 // *** generic plugin functions ***
 // ********************************
-func run_plugins(plugins []*pluginInfo, place int, session *fortisession.Session) bool {
+func split_plugin_name_data(full string) (spec string, data string) {
+	// plugin pluginspec is the string before |, data the string after
+	d := strings.Index(full, "|")
+	if d == -1 {
+		spec = full
+		data = ""
+	} else {
+		spec = full[:d]
+		data = full[d+1:]
+	}
+	return
+}
+
+func run_plugins(plugins []*plugin_common.FosetPlugin, place pluginHook, session *fortisession.Session) bool {
 	var ignore bool
 
 	for _, plugin := range plugins {
 		var r bool
-		if        place == PLUGINS_BEFORE_FILTER && plugin.beforeFilter != nil { r = plugin.beforeFilter(session)
-		} else if place == PLUGINS_AFTER_FILTER  && plugin.afterFilter  != nil { r = plugin.afterFilter(session)
-		} else if place == PLUGINS_END           && plugin.end          != nil { r = plugin.end(session)
+		if        place == PLUGINS_BEFORE_FILTER && plugin.Hooks.BeforeFilter != nil {
+			r = plugin.Hooks.BeforeFilter(session)
+		} else if place == PLUGINS_AFTER_FILTER  && plugin.Hooks.AfterFilter  != nil {
+			r = plugin.Hooks.AfterFilter(session)
+		} else if place == PLUGINS_FINISHED      && plugin.Hooks.Finished     != nil {
+			plugin.Hooks.Finished()
 		}
 		if r == true { ignore = true }
 	}
 
 	return ignore
+}
+
+func init_plugins() ([]*plugin_common.FosetPlugin) {
+	return make([]*plugin_common.FosetPlugin, 0)
 }
