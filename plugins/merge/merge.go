@@ -10,14 +10,25 @@ import (
 	"bufio"
 	"strconv"
 	"fortisession"
+	"fortisession/multivalue"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
 )
 
 var log loggo.Logger
 
-var global_data_fields   map[uint64][]string
+var global_data_fields   map[uint64][]*multivalue.MultiValue
 var global_data_columns  []string
+var global_data_types    []ColumnType
+var global_data_defaults []*multivalue.MultiValue
+
+type ColumnType uint8
+const (
+	CT_STRING        ColumnType = iota
+	CT_UINT64_10     ColumnType = iota
+	CT_UINT64_16     ColumnType = iota
+	CT_FLOAT64       ColumnType = iota
+)
 
 func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
 	// setup logging
@@ -28,7 +39,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	defaults["sep"] = " "
 	defaults["file"] = ""
 	defaults["key"] = "serial"
-	dk, du, dui := plugin_common.ExtractData(data, []string{"sep","file","key","force_key_hex"}, defaults)
+	dk, du, dui := plugin_common.ExtractData(data, []string{"sep","file","key"}, defaults)
 //	fmt.Printf("known: %f\nunknown: %f\nunknown integers: %f\n", dk, du, dui)
 
 	// make sure all parameters are correct
@@ -44,35 +55,70 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 		return nil, fmt.Errorf("fields position numbering should start from 1")
 	}
 
-	// find index of serial field
-	// at the same time, find the highest column index
-	var key_index int  = -1
+	// find the highest column index
 	var max_index int  = -1
-
-	for k, v := range dui {
-		if v == dk["key"] {  key_index = k-1 }
+	for k, _ := range dui {
 		if k > max_index  {  max_index = k   }
 	}
 
+	// prepare column names and types arrays
+	// and save them to globals
+	data_columns  := make([]string, max_index)
+	data_types    := make([]ColumnType, max_index)
+	data_defaults := make([]*multivalue.MultiValue, max_index)
+	key_index     := int(-1)
+
+	for i := 1; i <= max_index; i++ {
+		value, _ := dui[i]
+		perc     := strings.Index(value, "%")
+
+		if perc == -1 {
+			data_columns[i-1]  = value
+			data_types[i-1]    = CT_STRING
+			data_defaults[i-1] = multivalue.NewString("")
+
+		} else {
+			data_columns[i-1] = value[:perc]
+			tt := value[perc+1:]
+
+			if tt == "s" {
+				data_types[i-1]    = CT_STRING
+				data_defaults[i-1] = multivalue.NewString("")
+
+			} else if tt == "d" {
+				data_types[i-1]    = CT_UINT64_10
+				data_defaults[i-1] = multivalue.NewUint64(0)
+
+			} else if tt == "x" {
+				data_types[i-1]    = CT_UINT64_16
+				data_defaults[i-1] = multivalue.NewUint64(0)
+
+			} else if tt == "f" {
+				data_types[i-1]    = CT_FLOAT64
+				data_defaults[i-1] = multivalue.NewFloat64(0)
+
+			} else {
+				return nil, fmt.Errorf("unknown field type \"%s\" for field \"%s\"", tt, value)
+			}
+		}
+
+		// find key index
+		if data_columns[i-1] == dk["key"] {
+			key_index = i-1
+		}
+	}
+
+	global_data_columns  = data_columns
+	global_data_types    = data_types
+	global_data_defaults = data_defaults
+
+	// make sure we have key column
 	if key_index == -1 {
 		return nil, fmt.Errorf("key field name \"%s\" not present in fields", dk["key"])
 	}
 
-	// prepare column names array
-	// and sae them to globals
-	data_columns := make([]string, max_index)
-
-	for i := 1; i <= max_index; i++ {
-		data_columns[i-1], _ = dui[i]
-	}
-
-	global_data_columns = data_columns
-
-	// force hex parse even if it does not start with 0x ?
-	_, force_key_hex := dk["force_key_hex"]
-
 	// load the data from file and save it to global variable
-	data_fields, err := load_file(dk["file"], dk["sep"], key_index, force_key_hex)
+	data_fields, err := load_file(dk["file"], dk["sep"], key_index)
 	if err != nil { return nil, err }
 	global_data_fields = data_fields
 
@@ -97,8 +143,8 @@ func ProcessSession(session *fortisession.Session) bool {
 	for i, field := range global_data_columns {
 		if len(field) == 0  { continue }
 
-		if !found                 { session.Custom[field] = ""
-		} else if i >= len(data)  { session.Custom[field] = ""
+		if !found                 { session.Custom[field] = global_data_defaults[i]
+		} else if i >= len(data)  { session.Custom[field] = global_data_defaults[i]
 		} else                    { session.Custom[field] = data[i] }
 	}
 
@@ -106,11 +152,11 @@ func ProcessSession(session *fortisession.Session) bool {
 }
 
 
-func load_file(filename string, sep string, key_index int, force_key_hex bool) (map[uint64][]string, error) {
+func load_file(filename string, sep string, key_index int) (map[uint64][]*multivalue.MultiValue, error) {
 	f, err := os.Open(filename)
 	if err != nil { return nil, err }
 
-	data := make(map[uint64][]string)
+	data := make(map[uint64][]*multivalue.MultiValue)
 
 	var lineno uint64
 	scanner := bufio.NewScanner(f)
@@ -126,25 +172,54 @@ func load_file(filename string, sep string, key_index int, force_key_hex bool) (
 			continue
 		}
 
-		// recognize format of the key and parse it
-		key_text := strings.ToLower(parts[key_index])
-		var key uint64
-		if strings.HasPrefix(key_text, "0x") || force_key_hex {
-			if strings.HasPrefix(key_text, "0x") { key_text = key_text[2:] }
-			key, err = strconv.ParseUint(key_text, 16, 64)
-			if err != nil {
-				log.Warningf("line %d has unparsable hex session key \"%s\"", lineno, key_text)
-				continue
-			}
-		} else {
-			key, err = strconv.ParseUint(key_text, 10, 64)
-			if err != nil {
-				log.Warningf("line %d has unparsable session key \"%s\"", lineno, key_text)
-				continue
+		// convert parts to the right type
+		tparts := make([]*multivalue.MultiValue, len(parts))
+		for i, part := range parts {
+			if global_data_types[i] == CT_STRING {
+				tparts[i] = multivalue.NewString(part)
+
+			} else if global_data_types[i] == CT_FLOAT64 {
+				v, err := strconv.ParseFloat(part, 64)
+				if err != nil {
+					log.Warningf("line %d field \"%s\" cannot be parsed as float", lineno, part)
+					tparts[i] = global_data_defaults[i]
+				} else {
+					tparts[i] = multivalue.NewFloat64(v)
+				}
+
+			} else if global_data_types[i] == CT_UINT64_10 {
+				v, err := strconv.ParseUint(part, 10, 64)
+				if err != nil {
+					log.Warningf("line %d field \"%s\" cannot be parsed as integer with base 10", lineno, part)
+					tparts[i] = global_data_defaults[i]
+				} else {
+					tparts[i] = multivalue.NewUint64(v)
+				}
+
+			} else if global_data_types[i] == CT_UINT64_16 {
+				if strings.HasPrefix(part, "0x") { part = part[2:] }
+				v, err := strconv.ParseUint(part, 16, 64)
+				if err != nil {
+					log.Warningf("line %d field \"%s\" cannot be parsed as integer with base 16", lineno, part)
+					tparts[i] = global_data_defaults[i]
+				} else {
+					tparts[i] = multivalue.NewUint64(v)
+				}
+
+			} else {
+				log.Criticalf("Unknown data type %d", global_data_types[i])
+				os.Exit(100)
 			}
 		}
 
-		data[key] = parts
+		// locate the index and make sure it is integer
+		mvkey := tparts[key_index]
+		if !mvkey.IsUint64() {
+			log.Criticalf("Key is not integer")
+			os.Exit(100)
+		}
+
+		data[mvkey.GetUint64()] = tparts
 	}
 
 	return data, nil
