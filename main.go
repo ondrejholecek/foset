@@ -191,6 +191,9 @@ func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditi
 func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool, buffer bool) {
 	// prepare the buffer (even if it is not going to be used)
 	w := bufio.NewWriterSize(os.Stdout, 1024)
+	// is output terminal?
+	fi, _ := os.Stdout.Stat();
+	terminal := !(fi.Mode() & os.ModeCharDevice == 0)
 
 	//
 	for session := range results {
@@ -200,7 +203,7 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 		if conditioner != nil && !conditioner.Matches(session) { continue }
 		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
-		if buffer {
+		if buffer && !terminal {
 			w.WriteString(formatter.Format(session) + "\n")
 		} else {
 			fmt.Println(formatter.Format(session))
