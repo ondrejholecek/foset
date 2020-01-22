@@ -510,6 +510,11 @@ func ProcessFinished() {
 
 	// Save the counters to the JavaScript file.
 
+	// Top X could be given as parameter of the plugin, but it is rather hardcoded, because the ChartJS
+	// library is not very good in plotting variables number of lines into a fixed width canvas :-/
+	// Something around 14 is proved to give good results.
+	params["top"] = 14
+
 	// General overview
 	params["tab"] = "general-overview"
 
@@ -525,14 +530,8 @@ func ProcessFinished() {
 	params["transform"] = nil
 	params["valueformat"] = "number"
 	params["showOthers"] = true
-	params["top"] = 5
 	params["description"] = "Number of sessions using the specific IP protocol. Some well-known protocol numbers are automatically translated to their names, the unknown are left as protocol numbers found in IP packet header field 'Protocol'."
 	protocols.WriteData(f, params)
-
-	// Top X could be given as parameter of the plugin, but it is rather hardcoded, because the ChartJS
-	// library is not very good in plotting variables number of lines into a fixed width canvas :-/
-	// Something around 14 is proved to give good results.
-	params["top"] = 14
 
 	//
 	params["title"] = "VDOMs"
