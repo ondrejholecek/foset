@@ -18,5 +18,8 @@ windows:
 	mkdir -p $(RELEASE_DIR)/windows
 	GOOS=windows GOARCH=amd64 go build -o $(RELEASE_DIR)/windows/foset.exe $(LDFLAGS) *.go
 
+local:
+	go build -o foset $(LDFLAGS) *.go
+
 clean:
 	rm foset_macos foset_linux foset_windows.exe
