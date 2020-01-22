@@ -90,13 +90,18 @@ func WriteSimpleData(c *Counter, w io.Writer, params map[string]interface{}) {
 
 	// summarize others
 	if showOthers {
-		var sum uint64
+		var sum, items uint64
+
 		for i := max; i < c.Len(); i++ {
 			_, count := c.GetRevIndex(i)
 			sum += count
+			items += 1
 		}
-		labels = append(labels, "Others")
-		data   = append(data, fmt.Sprintf("%d", sum))
+
+		if items > 0 {
+			labels = append(labels, fmt.Sprintf("+ %d others", items))
+			data   = append(data, fmt.Sprintf("%d", sum))
+		}
 	}
 
 	// write to the output stream
