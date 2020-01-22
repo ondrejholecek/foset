@@ -14,17 +14,30 @@ import (
 	"compress/gzip"
 	"fortisession"
 	"fortisession/safequeue"
+	"foset/plugins/common"
+	"fortisession/forticonditioner"
 )
 
 // global processing struct to allow many gorutines to work at the same time
 var global_safequeue *safequeue.SafeQueue = safequeue.Init()
 
 //
-func process_sessions(results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool) {
+func process_sessions(results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool, total_count *uint64, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) {
 
 	for global_safequeue.IsActive() {
 		count := 0
 		for _, plain := range global_safequeue.Pop(128) {
+			session := fortisession.Parse(plain, req)
+
+			*total_count += 1
+			if *total_count % 100000 == 0 {
+				log.Debugf("Processed %d sessions", *total_count)
+			}
+
+			if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
+			if conditioner != nil && !conditioner.Matches(session) { continue }
+			if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
+
 			results <- fortisession.Parse(plain, req)
 			count += 1
 		}
@@ -93,11 +106,12 @@ type FileProcessing struct {
 	done    chan bool
 }
 
-func Init_file_processing(results chan *fortisession.Session, req *fortisession.SessionDataRequest, threads int) (*FileProcessing) {
+func Init_file_processing(results chan *fortisession.Session, req *fortisession.SessionDataRequest, threads int, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) (*FileProcessing) {
 	done := make(chan bool, threads)
+	var count uint64
 
 	for i := 0; i < threads; i++ {
-		go process_sessions(results, req, done)
+		go process_sessions(results, req, done, &count, conditioner, plugins)
 	}
 
 	return &FileProcessing {

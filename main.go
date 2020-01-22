@@ -113,6 +113,16 @@ func main() {
 		log.Debugf("Done")
 	}
 
+	// fill internal data for use by plugins
+	// and "Start" it
+	for _, plugin := range plugins {
+		plugin.Filename = *filename
+		plugin.Filter   = *filter
+		if plugin.Hooks.Start != nil {
+			plugin.Hooks.Start(plugin)
+		}
+	}
+
 	//
 	formatter, err := fortiformatter.Init(*output, &data_request)
 	if err != nil {
@@ -152,7 +162,7 @@ func main() {
 		session_cache, inerr = CacheInit(*filename + ".cache", "w", *threads)
 		data_request.Plain = false
 		go save_sessions(parsed_sessions, session_cache, conditioner, plugins, all_sessions_collected)
-		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads)
+		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads, conditioner, plugins)
 		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
 
 	} else if *cache_read {
@@ -162,7 +172,7 @@ func main() {
 
 	} else {
 		go collect_sessions(parsed_sessions, formatter, conditioner, plugins, all_sessions_collected, !(*nobuffer))
-		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads)
+		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads, conditioner, plugins)
 		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
 	}
 
@@ -198,10 +208,6 @@ func collect_sessions(results chan *fortisession.Session, formatter *fortiformat
 	//
 	for session := range results {
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
-
-		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
-		if conditioner != nil && !conditioner.Matches(session) { continue }
-		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
 		if buffer && !terminal {
 			w.WriteString(formatter.Format(session) + "\n")
