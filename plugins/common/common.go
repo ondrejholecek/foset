@@ -15,6 +15,7 @@ import (
 // Their return boolean specifies
 // whether `foset` should ignore the session (true = to not display it) or no (false).
 type Hooks struct {
+	Start            func(*FosetPlugin)
 	BeforeFilter     func(*fortisession.Session)(bool)
 	AfterFilter      func(*fortisession.Session)(bool)
 	Finished         func()
@@ -23,6 +24,10 @@ type Hooks struct {
 // FosetPlugin describes the plugin and specify its usage.
 type FosetPlugin struct {
 	Hooks   Hooks
+
+	// Parameters filled by main part of Foset for use inside of plugins
+	Filename  string
+	Filter    string
 }
 
 // ExtractData takes a plugin data string (everything after first "|" i plugin
