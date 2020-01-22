@@ -15,6 +15,7 @@ import (
 	// internal plugins:
 	"foset/plugins/example"
 	"foset/plugins/merge"
+	"foset/plugins/stats"
 )
 
 type pluginHook int
@@ -90,6 +91,8 @@ func load_internal_plugin(s string, data_request *fortisession.SessionDataReques
 
 	if pluginspec == "merge" {
 		pluginInfo, err = plugin_merge.InitPlugin(data, data_request, log.Child("iplugin"))
+	} else if pluginspec == "stats" {
+		pluginInfo, err = plugin_stats.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "example" {
 		pluginInfo, err = plugin_example.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else {
