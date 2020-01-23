@@ -124,7 +124,7 @@ func Init_file_processing(results chan *fortisession.Session, req *fortisession.
 func (state *FileProcessing) Read_all_from_file(filename string, compression Compression) (error) {
 	// where to read the data from 
 	var reader io.Reader
-	if filename == "" {
+	if filename == "-" {
 		reader = os.Stdin
 	} else {
 		tmp, err := os.Open(filename)
