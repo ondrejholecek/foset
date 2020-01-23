@@ -40,8 +40,12 @@ function get_horizontal_graph(ctx, labels, data, formatter) {
 				} else {
 					clipboard = formatter(data[yIndex]);
 				}
-				navigator.clipboard.writeText(clipboard);
-				$(this.canvas).notify("\"" + clipboard + "\" copied to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "success"});
+				if (navigator.clipboard) {
+					navigator.clipboard.writeText(clipboard);
+					$(this.canvas).notify("\"" + clipboard + "\" copied to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "success"});
+				} else {
+					$(this.canvas).notify("Unable to copy to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "error"});
+				}
 			},
 			animation: {
 				duration: 0,
