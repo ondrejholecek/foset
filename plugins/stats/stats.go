@@ -68,6 +68,10 @@ var offload_fail, offload_fail_org, offload_fail_rev *Counter
 var dict_tcp_session_state map[uint8]string
 var dict_udp_session_state map[uint8]string
 
+// session counters
+var count_total    uint64  // all sessions
+var count_matched  uint64  // session matching filter
+
 //
 func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
 	// setup logging with custom name (to differentiate from other plugins)
@@ -152,6 +156,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	// setup callbacks
 	var hooks plugin_common.Hooks
 	hooks.Start        = Start
+	hooks.BeforeFilter = ProcessBeforeFilter
 	hooks.AfterFilter  = ProcessAfterFilter
 	hooks.Finished     = ProcessFinished
 
@@ -229,7 +234,14 @@ func Start(pi *plugin_common.FosetPlugin) {
 	plugin_commit   = pi.Commit
 }
 
+func ProcessBeforeFilter(session *fortisession.Session) bool {
+	count_total += 1
+	return false
+}
+
 func ProcessAfterFilter(session *fortisession.Session) bool {
+	count_matched += 1
+
 	src_ip, src_port, dst_ip, dst_port, nat_ip, nat_port, _ := session.GetPeers()
 	srcnet := getNetwork(src_ip, srcmask)
 	dstnet := getNetwork(dst_ip, dstmask)
@@ -373,12 +385,14 @@ func ProcessFinished() {
 	// and save all data to it. At the end we save it to the `foset` object using unique name.
 	fmt.Fprintf(f, "var current = Object()\n")
 	fmt.Fprintf(f, "current.info = Object()\n")
-	fmt.Fprintf(f, "current.info.filename      = \"%s\"\n", plugin_filename)
-	fmt.Fprintf(f, "current.info.filter        = \"%s\"\n", plugin_filter)
-	fmt.Fprintf(f, "current.info.version       = \"%s\"\n", plugin_version)
-	fmt.Fprintf(f, "current.info.commit        = \"%s\"\n", plugin_commit)
-	fmt.Fprintf(f, "current.info.plugin_config = \"%s\"\n", config)
-	fmt.Fprintf(f, "current.info.calculated    = %d\n", time.Now().Unix())
+	fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", plugin_filename)
+	fmt.Fprintf(f, "current.info.filter           = \"%s\"\n", plugin_filter)
+	fmt.Fprintf(f, "current.info.version          = \"%s\"\n", plugin_version)
+	fmt.Fprintf(f, "current.info.commit           = \"%s\"\n", plugin_commit)
+	fmt.Fprintf(f, "current.info.plugin_config    = \"%s\"\n", config)
+	fmt.Fprintf(f, "current.info.calculated       = %d\n", time.Now().Unix())
+	fmt.Fprintf(f, "current.info.sessions_total   = %d\n", count_total)
+	fmt.Fprintf(f, "current.info.sessions_matched = %d\n", count_matched)
 	fmt.Fprintf(f, "current.data = Object()\n")
 	fmt.Fprintf(f, "current.order = []\n")
 	fmt.Fprintf(f, "current.tabs  = []\n")
