@@ -33,6 +33,8 @@ var directory_override   bool
 var use_complex_matching bool
 var srcprefix, dstprefix uint32
 var srcmask, dstmask     uint32
+var translate_vdoms      bool
+var translate_interfaces bool
 
 // counters
 var tcpsrcports, tcpdstports, tcpsrcdstports *Counter
@@ -78,11 +80,14 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	// setup logging with custom name (to differentiate from other plugins)
 	log = custom_log.Child("stats")
 
+	translate_vdoms = true
+	translate_interfaces = true
+
 	// parse data parameters
 	defaults := make(map[string]string)
 	defaults["srcprefix"] = "24"
 	defaults["dstprefix"] = "24"
-	dk, du, _ := plugin_common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force"}, defaults)
+	dk, du, _ := plugin_common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force","transvdoms","transifaces"}, defaults)
 
 	// validate parameters
 	unknowns := make([]string, 0)
@@ -90,6 +95,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	if len(unknowns) > 0 {
 		return nil, fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
 	}
+
+	// translations
+	_, translate_vdoms      = dk["transvdoms"]
+	_, translate_interfaces = dk["transifaces"]
 
 	var err error
 	var exists bool
@@ -139,6 +148,8 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	// save the public parts of config string
 	config = fmt.Sprintf("srcprefix=%d,dstprefix=%d", srcprefix, dstprefix)
 	if use_complex_matching { config += ",complex" }
+	if translate_vdoms      { config += ",transvdoms" }
+	if translate_interfaces { config += ",transifaces" }
 
 	// request fields
 	data_request.Hooks      = true
@@ -243,6 +254,25 @@ func ProcessBeforeFilter(session *fortisession.Session) bool {
 func ProcessAfterFilter(session *fortisession.Session) bool {
 	atomic.AddUint64(&count_matched, 1)
 
+	// It is expected that all sessions either have the custom vdom and iface[??] parameters
+	// or none of them have it. (For indexes that were not found, it is still expected to be
+	// present and contain the index in the text format.)
+	// Hence, we check whether the custom is field is present and if not, we disable translation.
+	if translate_vdoms {
+		_, custom_vdom := session.Custom["vdom"]
+		if !custom_vdom {
+			log.Errorf("VDOMs translation enabled, but at least one session does not have the custom field - disabling feature")
+			translate_vdoms = false
+		}
+
+		_, custom_iface := session.Custom["iface[oo]"]
+		if !custom_iface {
+			log.Errorf("Interface translation enabled, but at least one session does not have the custom field - disabling feature")
+			translate_interfaces = false
+		}
+	}
+
+	//
 	src_ip, src_port, dst_ip, dst_port, nat_ip, nat_port, _ := session.GetPeers()
 	srcnet := getNetwork(src_ip, srcmask)
 	dstnet := getNetwork(dst_ip, dstmask)
@@ -252,8 +282,22 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	snat_port.AddOne(nat_port)
 
 	protocols.AddOne(session.Basics.Protocol)
-	vdoms.AddOne(session.Policy.Vdom)
-	policies.AddOne((uint64(session.Policy.Vdom) << 32) | uint64(session.Policy.Id))
+
+	if translate_vdoms {
+		vdoms.AddOne(session.Custom["vdom"].AsString())
+		if session.Policy.Id == 0xffffffff {
+			policies.AddOne(fmt.Sprintf("%s / (i)", session.Custom["vdom"].AsString()))
+		} else {
+			policies.AddOne(fmt.Sprintf("%s / %d", session.Custom["vdom"].AsString(), session.Policy.Id))
+		}
+	} else {
+		vdoms.AddOne(session.Policy.Vdom)
+		if session.Policy.Id == 0xffffffff {
+			policies.AddOne(fmt.Sprintf("%s / (i)", session.Policy.Vdom))
+		} else {
+			policies.AddOne(fmt.Sprintf("%s / %d", session.Policy.Vdom, session.Policy.Id))
+		}
+	}
 
 	if session.Basics.Protocol == 6 {
 		tcpsrcports.AddOne(src_port)
@@ -354,10 +398,17 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	tunnels_in.AddOne(session.Other.Tunnel_in)
 	tunnels_out.AddOne(session.Other.Tunnel_out)
 
-	interfaces_org_in.AddOne(session.Interfaces.In_org)
-	interfaces_org_out.AddOne(session.Interfaces.Out_org)
-	interfaces_rev_in.AddOne(session.Interfaces.In_rev)
-	interfaces_rev_out.AddOne(session.Interfaces.Out_rev)
+	if translate_interfaces {
+		interfaces_org_in.AddOne(session.Custom["iface[oi]"].AsString())
+		interfaces_org_out.AddOne(session.Custom["iface[oo]"].AsString())
+		interfaces_rev_in.AddOne(session.Custom["iface[ri]"].AsString())
+		interfaces_rev_out.AddOne(session.Custom["iface[ro]"].AsString())
+	} else {
+		interfaces_org_in.AddOne(session.Interfaces.In_org)
+		interfaces_org_out.AddOne(session.Interfaces.Out_org)
+		interfaces_rev_in.AddOne(session.Interfaces.In_rev)
+		interfaces_rev_out.AddOne(session.Interfaces.Out_rev)
+	}
 
 	shapers_org.AddOne(session.Shaping.Shaper_org)
 	shapers_rev.AddOne(session.Shaping.Shaper_rev)
@@ -588,20 +639,39 @@ func ProcessFinished() {
 	protocols.WriteData(f, params)
 
 	//
-	params["title"] = "VDOMs"
-	params["translate"] = nil
-	params["valueformat"] = "number"
-	params["showOthers"] = true
-	params["transform"] = nil
-	params["description"] = "Number of sessions per VDOM. VDOM are represented by number that can be manually translated using 'diagnose sys vd list' FortiGate command (look for 'name' and 'index' fields)."
-	vdoms.WriteData(f, params)
+	if translate_vdoms {
+		params["title"] = "VDOMs"
+		params["translate"] = nil
+		params["valueformat"] = "number"
+		params["showOthers"] = true
+		params["transform"] = transform_text
+		params["description"] = "Number of sessions per VDOM. VDOM indexes are translated based on provided 'diagnose sys vd list' output."
+		vdoms.WriteData(f, params)
+	} else {
+		params["title"] = "VDOMs"
+		params["translate"] = nil
+		params["valueformat"] = "number"
+		params["showOthers"] = true
+		params["transform"] = nil
+		params["description"] = "Number of sessions per VDOM. VDOM are represented by number that can be manually translated using 'diagnose sys vd list' FortiGate command (look for 'name' and 'index' fields)."
+		vdoms.WriteData(f, params)
+	}
 
-	params["title"] = "Policies"
-	params["transform"] = transform_vdompolicy
-	params["valueformat"] = "number"
-	params["showOthers"] = true
-	params["description"] = "Number of sessions per policy. Because the policy IDs can be duplicated in different VDOMs, each line is composed of the VDOM index / policy ID."
-	policies.WriteData(f, params)
+	if translate_vdoms {
+		params["title"] = "Policies"
+		params["transform"] = transform_text
+		params["valueformat"] = "number"
+		params["showOthers"] = true
+		params["description"] = "Number of sessions per policy. Because the policy IDs can be duplicated in different VDOMs, each line is composed of the VDOM name / policy ID. Policy '(i)' means the internal policy that is used for traffic local to FortiGate."
+		policies.WriteData(f, params)
+	} else {
+		params["title"] = "Policies"
+		params["transform"] = transform_vdompolicy
+		params["valueformat"] = "number"
+		params["showOthers"] = true
+		params["description"] = "Number of sessions per policy. Because the policy IDs can be duplicated in different VDOMs, each line is composed of the VDOM index / policy ID. Policy '(i)' means the internal policy that is used for traffic local to FortiGate."
+		policies.WriteData(f, params)
+	}
 
 	params["title"] = "State flags"
 	params["transform"] = transform_text
@@ -790,20 +860,48 @@ func ProcessFinished() {
 
 	// Interfaces
 	params["tab"] = "interfaces"
-	params["transform"] = nil
 	params["valueformat"] = "number"
+
 	params["title"] = "Incoming interface in original direction"
-	params["description"] = "Index of the interface that the packets are received from in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+	if translate_interfaces {
+		params["description"] = "Index of the interface that the packets are received from in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Index of the interface that the packets are received from in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = nil
+	}
 	interfaces_org_in.WriteData(f, params)
+
 	params["title"] = "Outgoing interface in original direction"
-	params["description"] = "Index of the interface that the packets are sent to in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+	if translate_interfaces {
+		params["description"] = "Index of the interface that the packets are sent to in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Index of the interface that the packets are sent to in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = nil
+	}
 	interfaces_org_out.WriteData(f, params)
+
 	WriteSpace(f, "interfaces")
+
 	params["title"] = "Incoming interface in reverse direction"
-	params["description"] = "Index of the interface that the packets are received from in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+	if translate_interfaces {
+		params["description"] = "Index of the interface that the packets are received from in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Index of the interface that the packets are received from in the reverse session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = nil
+	}
 	interfaces_rev_in.WriteData(f, params)
+
 	params["title"] = "Outgoing interface in reverse direction"
-	params["description"] = "Index of the interface that the packets are sent to in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+	if translate_interfaces {
+		params["description"] = "Index of the interface that the packets are sent to in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Index of the interface that the packets are sent to in the reverse session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = nil
+	}
 	interfaces_rev_out.WriteData(f, params)
 
 	// Next hops 
