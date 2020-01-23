@@ -27,6 +27,8 @@ var plugin_commit   string
 var config          string
 
 // plugin parameters
+var directory            string
+var directory_override   bool
 var use_complex_matching bool
 var srcprefix, dstprefix uint32
 var srcmask, dstmask     uint32
@@ -75,7 +77,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	defaults := make(map[string]string)
 	defaults["srcprefix"] = "24"
 	defaults["dstprefix"] = "24"
-	dk, du, _ := plugin_common.ExtractData(data, []string{"srcprefix","dstprefix","complex"}, defaults)
+	dk, du, _ := plugin_common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force"}, defaults)
 
 	// validate parameters
 	unknowns := make([]string, 0)
@@ -84,9 +86,34 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 		return nil, fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
 	}
 
+	var err error
+	var exists bool
+
+	// save the path to the results directory
+	directory, exists = dk["directory"]
+	if !exists {
+		return nil, fmt.Errorf("parameter \"directory\" is mandatory")
+	}
+
+	// if the directory does not exist, we create it (_override = true)
+	// if the path exists and it is not a directory we return error
+	// otherwise the path exists and is a directory, so we don't override it
+	dstat, _ := os.Stat(directory)
+	if dstat == nil {
+		directory_override = true
+	} else if !dstat.IsDir() {
+		return nil, fmt.Errorf("directory path \"%s\" is not a directory", directory)
+	}
+
+	// however, it the "force" parameter was specified, override it it anyway
+	_, exists = dk["force"]
+	if exists {
+		log.Debugf("Parameter \"force\" present, overriding/recreating directory \"%s\"", directory)
+		directory_override = true
+	}
+
 	// prefix length specifies how precies should be the network calculations
 	var tmp uint64
-	var err error
 
 	tmp, err = strconv.ParseUint(dk["srcprefix"], 10, 32)
 	if err != nil { return nil, fmt.Errorf("parameter srcprefix unparsable: %s", err) }
@@ -329,9 +356,15 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 // ProcessFinished is called when all the sessions are processed
 // and `foset` is about to terminate.
 func ProcessFinished() {
-	f, err := os.OpenFile("/Users/oho/tmp/pppp/resources/data.js", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if we are supposed to create/override the directory, do that
+	if directory_override {
+		log.Debugf("Overriding (or creating) directory \"%s\"", directory)
+		createDirectory(directory)
+	}
+	// open the JS data file inside the directory
+	f, err := os.OpenFile(path.Join(directory, "resources/data.js"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Criticalf("Unable to write graph data: %s", err)
+		log.Criticalf("unable to write graph data: %s", err)
 		return
 	}
 
@@ -989,6 +1022,44 @@ func ProcessFinished() {
 	f.Close()
 }
 
+// Create directory structure
+func createDirectory(basedir string) {
+	var err error
+
+	err = os.MkdirAll(basedir, 0755)
+	if err != nil {
+		log.Criticalf("Unable to create base directory: %s", err)
+		os.Exit(100)
+	}
+
+	for _, name := range AssetNames() {
+		// just for sure split and join path using architecture speecific separator
+		resource := path.Join(strings.Split(name, "/")...)
+
+		// create sub-directory for each file
+		err = os.MkdirAll(path.Join(basedir, path.Dir(resource)), 0755)
+		if err != nil {
+			log.Criticalf("Unable to create nested directory: %s", err)
+			os.Exit(100)
+		}
+
+		// create file
+		f, err := os.Create(path.Join(basedir, resource))
+		if err != nil {
+			log.Criticalf("Unable to create file: %s", err)
+			os.Exit(100)
+		}
+
+		s, _ := Asset(name)
+		_, err = f.Write(s)
+		if err != nil {
+			log.Criticalf("Unable to write file: %s", err)
+			os.Exit(100)
+		}
+
+		f.Close()
+	}
+}
 
 // Local functions
 func getNetwork(ip net.IP, mask uint32) uint32 {

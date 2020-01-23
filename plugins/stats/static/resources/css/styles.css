@@ -1,0 +1,126 @@
+html * {
+	font-family: Lato,Helvetica,Arial,sans-serif !important;
+}
+
+/* Class empty is used on div on place where normally would 
+   be a canvas with graph, but for some reason we want to
+	keep this place empty (aligning relevant graphs togeter).
+
+	It is not taken into account for small screens where it
+	is more important to fully utilize the space, but it is
+	used on screens wider than 1600px.
+*/
+.empty { display: none }
+
+/* By default there is only one graphs in a row, which is
+   needed on small screens. For wider screens we show
+	two or even three (which is maximum) columns per row.
+*/
+div.graph-tab {
+	grid-template-columns: 1fr;
+}
+
+@media screen and (min-width: 1000px) {
+	div.graph-tab {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media screen and (min-width: 1600px) {
+	div.graph-tab {
+		grid-template-columns: 1fr 1fr 1fr;
+	}
+
+	.empty { display: inline }
+}
+
+/* Select div is just above tabs and contains the select 
+   box for different data sources, space, checkbox for
+	"Show others".
+*/
+#select {
+	padding-bottom: 3px;
+	display: grid;
+	grid-template-columns: 80% 1% 19%;
+	grid-auto-rows auto;
+}
+
+/* Make the checks without any uncessary space around
+   to match the style of select box on the left side.
+*/
+#select label {
+	padding-top: 1 !important;
+	padding-bottom: 2 !important;
+}
+
+/* Change the color of the checkbox that is used
+   when the mouse button is down when enabling it.
+	We use the same color that is used when the 
+	checkbox is fully enabled.
+*/
+#select .ui-button:active {
+	background: #248b0f !important;
+	border: 0;
+}
+
+/* Small space around tabs themselves should not have any border
+   and it should have the same background as the tab content.
+*/
+#tabs {
+	border: 1px solid #248b0f;
+	padding: 0;
+}
+
+/* Background of the tabs themselves should have the same color
+   as the background of the tab content.
+*/
+#tabs .ui-tabs-nav {
+	background: #f6f6f6;
+}
+
+/* Background of the tab content. */
+#tabs .ui-widget-content {
+	background: #f6f6f6 !important;
+}
+
+/* No shadows around the tab itself after clicking it. */
+#tabs ul li a {
+	outline-color: #f6f6f6;
+}
+
+/* Change active color for all jQuery UI widgets from blue
+   to green. This applies on tabs as well as checkbox.
+*/
+.ui-state-active {
+	background: #248b0f !important;
+	border: 0px;
+}
+
+/* This is necessary for Chart.js to be fully responsive. */
+.graph-tab div {
+	min-width: 0;
+}
+
+/* Canvas (graph) with is 100% of the column. Number of columns
+   is dynamically determined with @media screen above.
+	The height is auto-calculated by Chart.js.
+*/
+canvas.graph { width: 100% }
+
+/* Graphs title and description text. */
+div.graphContainer h2 { text-align: center }
+div.graphContainer p  { text-align: center }
+
+
+/* Allow some space between graphs so the text do not touch. */
+div.graphContainer {
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+/* Author's signature at the bottom right */
+#author { 
+	text-align: right;
+	font-style: italic;
+	font-size: 10px;
+}

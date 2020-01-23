@@ -1,0 +1,64 @@
+<html>
+<head>
+	<title>Foset graphs</title>
+
+	<link rel="shortcut icon" type="image/png" href="resources/external/favicon.ico"/>
+
+	<link rel="stylesheet" type="text/css" href="resources/external_css/jquery-ui.min.css" />
+	<link rel="stylesheet" type="text/css" href="resources/external_css/chosen.min.css" />
+	<link rel="stylesheet" type="text/css" href="resources/external_css/font-lato.css" />
+
+	<link rel="stylesheet" type="text/css" href="resources/css/styles.css" />
+
+	<script src="resources/external_js/jquery-1.12.4.min.js"></script>
+	<script src="resources/external_js/jquery-ui.min.js"></script>
+	<script src="resources/external_js/chosen.jquery.min.js"></script>
+	<script src="resources/external_js/Chart.bundle.min.js"></script>
+	<script src="resources/external_js/chartjs-plugin-datalabels.js"></script>
+	<script src="resources/external_js/palette.js"></script>
+	<script src="resources/external_js/notify.min.js"></script>
+
+	<script src="resources/js/structure.js"></script>
+	<script src="resources/js/graphs.js"></script>
+	<script src="resources/data.js"></script>
+
+	<script>
+		function Init() {
+			$("#tabs").tabs();
+
+			loadData();
+			inputDataChanged(foset.length-1, $("#show-others").is(":checked"));
+
+			$('#show-others').checkboxradio({ icon: false });
+			$('#show-others').on('change', function() {
+				inputDataChanged( $("#inputdata").val(), $("#show-others").is(":checked") );
+			});
+
+			$("#inputdata").chosen();
+			$('#inputdata').on('change', function(event, params) {
+				inputDataChanged( $("#inputdata").val(), $("#show-others").is(":checked") );
+			});
+		}
+	</script>
+</head>
+
+<body onLoad="Init()">
+
+	<div id="select">
+		<select name="inputdata" id="inputdata" data-placeholder="Select input data"></select>
+
+		<span></span>
+
+		<label for="show-others">Show "Others" line</label>
+		<input type="checkbox" name="show-others" id="show-others" checked>
+	</div>
+
+	<div id="tabs">
+	</div>
+
+	<div id="author">
+		<p>Generated using <a href="https://github.com/ondrejholecek/foset">Foset (FOrtigate SEssion Tool)</a> written by <a href="mailto:ondrej@holecek.eu?subject=Foset: ">Ondrej Holecek</a>
+	<div>
+
+</body>
+</html>
