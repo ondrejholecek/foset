@@ -22,6 +22,8 @@ import (
 var log loggo.Logger
 var plugin_filename string
 var plugin_filter   string
+var plugin_version  string
+var plugin_commit   string
 var config          string
 
 // plugin parameters
@@ -196,6 +198,8 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 func Start(pi *plugin_common.FosetPlugin) {
 	plugin_filename = path.Base(pi.Filename)
 	plugin_filter   = pi.Filter
+	plugin_version  = pi.Version
+	plugin_commit   = pi.Commit
 }
 
 func ProcessAfterFilter(session *fortisession.Session) bool {
@@ -325,7 +329,7 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 // ProcessFinished is called when all the sessions are processed
 // and `foset` is about to terminate.
 func ProcessFinished() {
-	f, err := os.OpenFile("/Users/oho/tmp/pppp/data.js", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("/Users/oho/tmp/pppp/resources/data.js", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Criticalf("Unable to write graph data: %s", err)
 		return
@@ -336,13 +340,15 @@ func ProcessFinished() {
 	// and save all data to it. At the end we save it to the `foset` object using unique name.
 	fmt.Fprintf(f, "var current = Object()\n")
 	fmt.Fprintf(f, "current.info = Object()\n")
-	fmt.Fprintf(f, "current.info.filename = \"%s\"\n", plugin_filename)
-	fmt.Fprintf(f, "current.info.filter = \"%s\"\n", plugin_filter)
+	fmt.Fprintf(f, "current.info.filename      = \"%s\"\n", plugin_filename)
+	fmt.Fprintf(f, "current.info.filter        = \"%s\"\n", plugin_filter)
+	fmt.Fprintf(f, "current.info.version       = \"%s\"\n", plugin_version)
+	fmt.Fprintf(f, "current.info.commit        = \"%s\"\n", plugin_commit)
 	fmt.Fprintf(f, "current.info.plugin_config = \"%s\"\n", config)
-	fmt.Fprintf(f, "current.info.calculated = %d\n", time.Now().Unix())
+	fmt.Fprintf(f, "current.info.calculated    = %d\n", time.Now().Unix())
 	fmt.Fprintf(f, "current.data = Object()\n")
 	fmt.Fprintf(f, "current.order = []\n")
-	fmt.Fprintf(f, "current.tabs = []\n")
+	fmt.Fprintf(f, "current.tabs  = []\n")
 	fmt.Fprintf(f, "current.tabs.push({\"id\":\"general-overview\", \"title\":\"General overview\"});\n")
 	fmt.Fprintf(f, "current.tabs.push({\"id\":\"ports\", \"title\":\"Ports\"});\n")
 	fmt.Fprintf(f, "current.tabs.push({\"id\":\"networks\", \"title\":\"Networks\"});\n")
