@@ -4,7 +4,8 @@ FORTISESSION_GIT_COMMIT := $(shell cd ../fortisession/; git rev-list -1 HEAD)
 LDFLAGS=-ldflags="-s -w -X main.fosetGitCommit=$(FOSET_GIT_COMMIT) -X main.fortisessionGitCommit=$(FORTISESSION_GIT_COMMIT) -X main.mainVersion=$(MAIN_VERSION)"
 RELEASE_DIR=release/$(MAIN_VERSION)
 
-all: macos linux windows
+all: local
+release: macos linux windows
 
 macos:
 	mkdir -p $(RELEASE_DIR)/macos
