@@ -16,6 +16,7 @@ import (
 	"foset/plugins/example"
 	"foset/plugins/merge"
 	"foset/plugins/stats"
+	"foset/plugins/indexmap"
 )
 
 type pluginHook int
@@ -93,6 +94,8 @@ func load_internal_plugin(s string, data_request *fortisession.SessionDataReques
 		pluginInfo, err = plugin_merge.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "stats" {
 		pluginInfo, err = plugin_stats.InitPlugin(data, data_request, log.Child("iplugin"))
+	} else if pluginspec == "indexmap" {
+		pluginInfo, err = plugin_indexmap.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "example" {
 		pluginInfo, err = plugin_example.InitPlugin(data, data_request, log.Child("iplugin"))
 	} else {
