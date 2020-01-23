@@ -26,6 +26,8 @@ type FosetPlugin struct {
 	Hooks   Hooks
 
 	// Parameters filled by main part of Foset for use inside of plugins
+	Version   string
+	Commit    string
 	Filename  string
 	Filter    string
 }

@@ -118,6 +118,8 @@ func main() {
 	for _, plugin := range plugins {
 		plugin.Filename = *filename
 		plugin.Filter   = *filter
+		plugin.Version  = mainVersion
+		plugin.Commit   = fosetGitCommit
 		if plugin.Hooks.Start != nil {
 			plugin.Hooks.Start(plugin)
 		}
