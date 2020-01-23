@@ -87,10 +87,48 @@ function loadData() {
 		var d = new Date(foset[i].info.calculated*1000);
 		option += d.toLocaleString(language);
 
-		option += " | file \"" + foset[i].info.filename + "\"";
+		parseInt(foset[i].info.sessions_total).toLocaleString();
+
+		option += " | file \"" + foset[i].info.filename + "\" [" + parseInt(foset[i].info.sessions_total).toLocaleString() + "]";
 		option += " | config \"" + foset[i].info.plugin_config + "\"";
-		option += " | filter \"" + foset[i].info.filter + "\"";
+		option += " | filter [" + parseInt(foset[i].info.sessions_matched).toLocaleString() + "] \"" + foset[i].info.filter + "\"";
 		option += "</option>";
 		inputdata.append($.parseHTML(option));
+	}
+}
+
+function setupKeys() {
+	document.onkeyup=function(e){
+		if (e.ctrlKey && (e.key == "p" || e.key == "k")) {
+			var to = parseInt($("#inputdata").val())-1;
+			if (to < 0) return;
+			$("#inputdata").val("" + to);
+			$("#inputdata").trigger("chosen:updated");
+			$("#inputdata").trigger("change");
+
+		} else if (e.ctrlKey && (e.key == "n" || e.key == "j")) {
+			var to = parseInt($("#inputdata").val())+1;
+			if (to >= $("#inputdata")[0].length) return;
+			$("#inputdata").val("" + to);
+			$("#inputdata").trigger("chosen:updated");
+			$("#inputdata").trigger("change");
+
+		} else if (e.ctrlKey && e.key == "o") {
+			$('#show-others').prop("checked", !$('#show-others').prop("checked"));
+			$("#show-others").trigger("change");
+
+		} else if (e.ctrlKey && e.key == "s") {
+			$('#inputdata').trigger('chosen:open');
+
+		} else if (e.key == "ArrowRight" || (e.ctrlKey && e.key == "l")) {
+			var to = $("#tabs").tabs('option', 'active')+1;
+			if (to >= $("#tabs >ul >li").length) to = 0;
+			$("#tabs").tabs({active: to});
+
+		} else if (e.key == "ArrowLeft" || (e.ctrlKey && e.key == "h")) {
+			var to = $("#tabs").tabs('option', 'active')-1;
+			if (to < 0) to = $("#tabs >ul >li").length - 1;
+			$("#tabs").tabs({active: to});
+		}
 	}
 }

@@ -37,7 +37,10 @@
 			$("#inputdata").chosen();
 			$('#inputdata').on('change', function(event, params) {
 				inputDataChanged( $("#inputdata").val(), $("#show-others").is(":checked") );
+				setTimeout(function() { $('#inputdata').trigger('chosen:close') }, 0);
 			});
+
+			setupKeys();
 		}
 	</script>
 </head>
