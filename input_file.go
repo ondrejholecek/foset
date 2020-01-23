@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"bytes"
 	"time"
+	"sync/atomic"
 	"container/list"
 	"compress/gzip"
 	"fortisession"
@@ -29,7 +30,7 @@ func process_sessions(results chan *fortisession.Session, req *fortisession.Sess
 		for _, plain := range global_safequeue.Pop(128) {
 			session := fortisession.Parse(plain, req)
 
-			*total_count += 1
+			atomic.AddUint64(total_count, 1)
 			if *total_count % 100000 == 0 {
 				log.Debugf("Processed %d sessions", *total_count)
 			}

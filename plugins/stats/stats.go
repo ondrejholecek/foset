@@ -13,6 +13,7 @@ import (
 	"path"
 	"time"
 	"encoding/binary"
+	"sync/atomic"
 	"fortisession"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
@@ -235,12 +236,12 @@ func Start(pi *plugin_common.FosetPlugin) {
 }
 
 func ProcessBeforeFilter(session *fortisession.Session) bool {
-	count_total += 1
+	atomic.AddUint64(&count_total, 1)
 	return false
 }
 
 func ProcessAfterFilter(session *fortisession.Session) bool {
-	count_matched += 1
+	atomic.AddUint64(&count_matched, 1)
 
 	src_ip, src_port, dst_ip, dst_port, nat_ip, nat_port, _ := session.GetPeers()
 	srcnet := getNetwork(src_ip, srcmask)
