@@ -293,9 +293,9 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	} else {
 		vdoms.AddOne(session.Policy.Vdom)
 		if session.Policy.Id == 0xffffffff {
-			policies.AddOne(fmt.Sprintf("%s / (i)", session.Policy.Vdom))
+			policies.AddOne(fmt.Sprintf("%d / (i)", session.Policy.Vdom))
 		} else {
-			policies.AddOne(fmt.Sprintf("%s / %d", session.Policy.Vdom, session.Policy.Id))
+			policies.AddOne(fmt.Sprintf("%d / %d", session.Policy.Vdom, session.Policy.Id))
 		}
 	}
 
@@ -513,16 +513,6 @@ func ProcessFinished() {
 		return fmt.Sprintf("%d -> %d", src_port, dst_port)
 	}
 
-	transform_vdompolicy := func(o interface{})(string) {
-		vdom   := o.(uint64) >> 32
-		policy := uint32(o.(uint64))
-		if policy == 0xffffffff {
-			return fmt.Sprintf("%d / (i)", vdom)
-		} else {
-			return fmt.Sprintf("%d / %d", vdom, policy)
-		}
-	}
-
 	transform_tcp_session_state := func(o interface{})(string) {
 		name, exists := dict_tcp_session_state[o.(uint8)]
 		if !exists { return "UNKNOWN"
@@ -666,7 +656,7 @@ func ProcessFinished() {
 		policies.WriteData(f, params)
 	} else {
 		params["title"] = "Policies"
-		params["transform"] = transform_vdompolicy
+		params["transform"] = transform_text
 		params["valueformat"] = "number"
 		params["showOthers"] = true
 		params["description"] = "Number of sessions per policy. Because the policy IDs can be duplicated in different VDOMs, each line is composed of the VDOM index / policy ID. Policy '(i)' means the internal policy that is used for traffic local to FortiGate."
