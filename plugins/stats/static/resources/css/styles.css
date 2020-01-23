@@ -41,7 +41,7 @@ div.graph-tab {
 #select {
 	padding-bottom: 3px;
 	display: grid;
-	grid-template-columns: 80% 1% 19%;
+	grid-template-columns: 74% 0.5% 18% 0.5% 7%;
 	grid-auto-rows auto;
 }
 
@@ -118,8 +118,38 @@ div.graphContainer {
 	padding-right: 5px;
 }
 
+/* Help window color matching the rest of the page */
+#help.modal {
+	border: 2px solid #248b0f;
+	background: #f6f6f6 !important;
+	max-width: 70% !important;
+}
+
+/* Help window uses green icon for closing */
+#help a.close-modal {
+	background-image: url(modal-close.png) !important;
+}
+
+/* Help content styling */
+#help h1 {
+	text-align: center;
+	color: #248b0f;
+}
+
+#help h3 {
+	color: #248b0f;
+}
+
+#help p.section {
+	text-align: justify;
+}
+
+#help {
+	padding-bottom: 0;
+}
+
 /* Author's signature at the bottom right */
-#author { 
+p.author { 
 	text-align: right;
 	font-style: italic;
 	font-size: 10px;

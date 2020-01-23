@@ -44,7 +44,7 @@ function get_horizontal_graph(ctx, labels, data, formatter) {
 					navigator.clipboard.writeText(clipboard);
 					$(this.canvas).notify("\"" + clipboard + "\" copied to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "success"});
 				} else {
-					$(this.canvas).notify("Unable to copy to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "error"});
+					$(this.canvas).notify("Unable to copy to clipboard.", { position: "top left", autoHideDelay: 1000, className: "error"});
 				}
 			},
 			animation: {

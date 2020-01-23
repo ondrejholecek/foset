@@ -90,8 +90,8 @@ function loadData() {
 		parseInt(foset[i].info.sessions_total).toLocaleString();
 
 		option += " | file \"" + foset[i].info.filename + "\" [" + parseInt(foset[i].info.sessions_total).toLocaleString() + "]";
-		option += " | config \"" + foset[i].info.plugin_config + "\"";
 		option += " | filter [" + parseInt(foset[i].info.sessions_matched).toLocaleString() + "] \"" + foset[i].info.filter + "\"";
+		//option += " | config \"" + foset[i].info.plugin_config + "\"";
 		option += "</option>";
 		inputdata.append($.parseHTML(option));
 	}
@@ -117,7 +117,7 @@ function setupKeys() {
 			$('#show-others').prop("checked", !$('#show-others').prop("checked"));
 			$("#show-others").trigger("change");
 
-		} else if (e.ctrlKey && e.key == "s") {
+		} else if (e.ctrlKey && e.key == "e") {
 			$('#inputdata').trigger('chosen:open');
 
 		} else if (e.key == "ArrowRight" || (e.ctrlKey && e.key == "l")) {
