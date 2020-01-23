@@ -39,7 +39,7 @@ func process_sessions(results chan *fortisession.Session, req *fortisession.Sess
 			if conditioner != nil && !conditioner.Matches(session) { continue }
 			if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
-			results <- fortisession.Parse(plain, req)
+			results <- session
 			count += 1
 		}
 
