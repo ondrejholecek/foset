@@ -11,12 +11,29 @@ Chart.defaults.global.plugins.datalabels.borderColor = 'black';
 Chart.defaults.global.plugins.datalabels.font.weight = 'bold';
 Chart.defaults.global.plugins.datalabels.backgroundColor = 'white';
 
-// Update graph
-function update_graph(ctx, labels, data, formatter) {
+function graph_click(e, name) {
+	var obj = existing_graphs[name];
+	var yIndex = obj.scales['y-axis-0'].getValueForPixel(e.offsetY);
+	var xIndex = obj.scales['x-axis-0'].getValueForPixel(e.offsetX);
+	// no label means an empty line that we don't copy
+	if (obj.data.labels[yIndex].length == 0) return;
+	// negative xIndex is a label click, positive is a bar click
+	var clipboard;
+	if (xIndex < 0) {
+		clipboard = obj.data.labels[yIndex];
+	} else {
+		clipboard = obj.options.plugins.datalabels.formatter(obj.data.datasets[0].data[yIndex]);
+	}
+	if (navigator.clipboard) {
+		navigator.clipboard.writeText(clipboard);
+		$(obj.canvas).notify("\"" + clipboard + "\" copied to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "success"});
+	} else {
+		$(obj.canvas).notify("Unable to copy to clipboard.", { position: "top left", autoHideDelay: 1000, className: "error"});
+	}
 }
 
 // Create graphs
-function get_horizontal_graph(ctx, labels, data, formatter) {
+function get_horizontal_graph(ctx, labels, data, formatter, name) {
 	var myChart = new Chart(ctx, {
 		type: 'horizontalBar',
 		data: {
@@ -32,25 +49,11 @@ function get_horizontal_graph(ctx, labels, data, formatter) {
 		},
 
 		options: {
-			onClick: function(e) {
-				var yIndex = this.scales['y-axis-0'].getValueForPixel(e.offsetY);
-				var xIndex = this.scales['x-axis-0'].getValueForPixel(e.offsetX);
-				// no label means an empty line that we don't copy
-				if (labels[yIndex].length == 0) return;
-				// negative xIndex is a label click, positive is a bar click
-				var clipboard;
-				if (xIndex < 0) {
-					clipboard = labels[yIndex];
-				} else {
-					clipboard = formatter(data[yIndex]);
+			onClick: (function(x_name) {
+				return function(e) {
+					graph_click(e, x_name);
 				}
-				if (navigator.clipboard) {
-					navigator.clipboard.writeText(clipboard);
-					$(this.canvas).notify("\"" + clipboard + "\" copied to the clipboard.", { position: "top left", autoHideDelay: 1000, className: "success"});
-				} else {
-					$(this.canvas).notify("Unable to copy to clipboard.", { position: "top left", autoHideDelay: 1000, className: "error"});
-				}
-			},
+			})(name),
 			animation: {
 				duration: 0,
 			},

@@ -1,5 +1,7 @@
 // show notification messages
 var show_notify = true;
+// keep existing graphs objects
+var existing_graphs = Object();
 
 function inputDataChanged(data_id, showOthers) {
 	$("#inputdata").val(data_id).trigger("liszt:updated");
@@ -48,7 +50,6 @@ function initScreen(showData, showOthers) {
 	$("#tabs").show({effect: 'fade', duration: 100});
 }
 
-var existing_graphs = Object();
 function plotGraphs(showData, showOthers) {
 	// plot graphs
 	for (data of showData["order"]) {
@@ -77,7 +78,7 @@ function plotGraphs(showData, showOthers) {
 
 				if (typeof existing_graphs[data] === 'undefined') {
 					// first init
-					existing_graphs[data] = get_horizontal_graph(canvas.getContext('2d'), g_labels, g_data, formatters[g_format]);
+					existing_graphs[data] = get_horizontal_graph(canvas.getContext('2d'), g_labels, g_data, formatters[g_format], data);
 				} else {
 					// redraw
 					existing_graphs[data].data.labels = g_labels;
