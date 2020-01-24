@@ -79,6 +79,7 @@ function plotGraphs(showData, showOthers) {
 					// redraw
 					existing_graphs[data].data.labels = g_labels;
 					existing_graphs[data].data.datasets[0].data = g_data;
+					existing_graphs[data].data.datasets[0].backgroundColor = palette('mpn65', g_data.length).map(function(hex) { return '#' + hex; }),
 					existing_graphs[data].update();
 				}
 			}
