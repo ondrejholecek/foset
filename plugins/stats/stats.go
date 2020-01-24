@@ -402,8 +402,13 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 		offload_fail_rev.AddOne(session.NpuError.Kernel_rev + "/" + session.NpuError.Driver_rev)
 	}
 
-	tunnels_in.AddOne(session.Other.Tunnel_in)
-	tunnels_out.AddOne(session.Other.Tunnel_out)
+	if session.Other.Tunnel_in != "" {
+		tunnels_in.AddOne(session.Other.Tunnel_in)
+	}
+
+	if session.Other.Tunnel_out != "" {
+		tunnels_out.AddOne(session.Other.Tunnel_out)
+	}
 
 	if translate_interfaces {
 		interfaces_org_in.AddOne(session.Custom["iface[oi]"].AsString())
