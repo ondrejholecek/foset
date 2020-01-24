@@ -144,6 +144,11 @@ div.graphContainer {
 	text-align: justify;
 }
 
+#help div#help-shortcuts {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+}
+
 #help {
 	padding-bottom: 0;
 }

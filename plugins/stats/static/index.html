@@ -36,6 +36,7 @@
 			$("#tabs").tabs();
 
 			loadData();
+			initScreen(foset[foset.length-1], $("#show-others").is(":checked"));
 			inputDataChanged(foset.length-1, $("#show-others").is(":checked"));
 
 			$('#show-others').checkboxradio({ icon: false });
@@ -102,14 +103,25 @@
 		</p>
 		<h3>Keyboard shortcuts</h3>
 		<p class="section">To make the investigation faster, it is possible to control the page using keyboard. Following shortcuts are recognized:
-		<ul>
-			<li>Ctrl+j : next dataset</li>
-			<li>Ctrl+k : previous dataset</li>
-			<li>Ctrl+l : next tab</li>
-			<li>Ctrl+h : previous tab</li>
-			<li>Ctrl+o : toggle "others" line</li>
-			<li>Ctrl+e : text search in dataset</li>
-		</ul>
+		<div id="help-shortcuts">
+			<span>
+				<ul>
+					<li>Ctrl+j : next dataset</li>
+					<li>Ctrl+k : previous dataset</li>
+					<li>Ctrl+l : next tab</li>
+					<li>Ctrl+h : previous tab</li>
+					<li>Ctrl+o : toggle "others" line</li>
+					<li>Ctrl+e : text search in dataset</li>
+				</ul>
+			</span>
+			<span>
+				<ul>
+					<li>Ctrl+Alt+1 : set fast key 1 for current dataset</li>
+					<li>Ctrl+1 : switch to dataset with fast key 1</li>
+				</ul>
+				<p>... similarly for other fast keys between 1 and 9</p>
+			</span>
+		</div>
 		<p class="author">Generated using <a href="https://github.com/ondrejholecek/foset">Foset (FOrtigate SEssion Tool)</a> written by <a href="mailto:ondrej@holecek.eu?subject=Foset: ">Ondrej Holecek</a></p>
 	</div>
 

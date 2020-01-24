@@ -11,6 +11,10 @@ Chart.defaults.global.plugins.datalabels.borderColor = 'black';
 Chart.defaults.global.plugins.datalabels.font.weight = 'bold';
 Chart.defaults.global.plugins.datalabels.backgroundColor = 'white';
 
+// Update graph
+function update_graph(ctx, labels, data, formatter) {
+}
+
 // Create graphs
 function get_horizontal_graph(ctx, labels, data, formatter) {
 	var myChart = new Chart(ctx, {
