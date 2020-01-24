@@ -382,8 +382,14 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	}
 
 	ttls.AddOne(session.Basics.Timeout)
-	helpers.AddOne(session.Other.Helper)
-	users.AddOne(session.Auth.User)
+
+	if session.Other.Helper != "" {
+		helpers.AddOne(session.Other.Helper)
+	}
+
+	if session.Auth.User != "" {
+		users.AddOne(session.Auth.User)
+	}
 
 	var offload_npu_mix uint64 = (uint64(session.Npu.Offload_org) << 8) | uint64(session.Npu.Offload_rev)
 	offload_npu.AddOne(offload_npu_mix)
@@ -686,14 +692,14 @@ func ProcessFinished() {
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["showOthers"] = true
-	params["description"] = "Used helpers on sessions."
+	params["description"] = "Used helpers on sessions. Only session with helpers shown."
 	helpers.WriteData(f, params)
 
 	params["title"] = "Users"
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["showOthers"] = true
-	params["description"] = "Sessions with authorized users."
+	params["description"] = "Sessions with authorized users. Only sessions with users shown."
 	users.WriteData(f, params)
 
 	// Top ports
