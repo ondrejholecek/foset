@@ -945,7 +945,7 @@ func ProcessFinished() {
 	WriteSpace(f, "offload")
 
 	params["title"] = "NPU offload fail generic"
-	params["description"] = "The reason why the session could not be offloaded to NPU. It does not differentiate between the sessions that wanted or didn't want to be offloaded."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no reason field, hence the session may be offloaded or it is not offloaded with no known reason."
 	params["showOthers"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
@@ -953,7 +953,7 @@ func ProcessFinished() {
 	offload_fail.WriteData(f, params)
 
 	params["title"] = "NPU offload fail in forward direction"
-	params["description"] = "The reason why the session could not be offloaded to NPU. It does not differentiate between the sessions that wanted or didn't want to be offloaded. Displayed as combined reason from kernel / driver."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no fail field, hence the session may be offloaded or it is not offloaded with no known reason. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
 	params["transform"] = func(o interface{})(string) {
 		if o.(string) == "/" { return "[no reason]"
@@ -964,7 +964,7 @@ func ProcessFinished() {
 	offload_fail_org.WriteData(f, params)
 
 	params["title"] = "NPU offload fail in reverse direction"
-	params["description"] = "The reason why the session could not be offloaded to NPU. It does not differentiate between the sessions that wanted or didn't want to be offloaded. Displayed as combined reason from kernel / driver."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no fail field, hence the session may be offloaded or it is not offloaded with no known reason. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
 	params["transform"] = func(o interface{})(string) {
 		if o.(string) == "/" { return "[no reason]"
