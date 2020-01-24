@@ -1,3 +1,6 @@
+// show notification messages
+var show_notify = true;
+
 function inputDataChanged(data_id, showOthers) {
 	$("#inputdata").val(data_id).trigger("liszt:updated");
 	plotGraphs(foset[data_id], showOthers);
@@ -126,8 +129,10 @@ function setupKeys() {
 			$("#inputdata").trigger("chosen:updated");
 			$("#inputdata").trigger("change");
 
-			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			if (show_notify) {
+				$('.notifyjs-corner').empty();
+				$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			}
 
 		} else if (e.ctrlKey && (e.key == "n" || e.key == "j")) {
 			var to = parseInt($("#inputdata").val())+1;
@@ -136,23 +141,32 @@ function setupKeys() {
 			$("#inputdata").trigger("chosen:updated");
 			$("#inputdata").trigger("change");
 
-			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			if (show_notify) {
+				$('.notifyjs-corner').empty();
+				$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			}
 
 		} else if (e.ctrlKey && e.key == "o") {
 			if ($('#show-others').prop("checked")) {
 				$('#show-others').prop("checked", false);
-				$('.notifyjs-corner').empty();
-				$.notify("Other records hidden", {className: "success", position: "bottom right", autoHideDelay: 1000});
+				if (show_notify) {
+					$('.notifyjs-corner').empty();
+					$.notify("Other records hidden", {className: "success", position: "bottom right", autoHideDelay: 1000});
+				}
 			} else {
 				$('#show-others').prop("checked", true);
-				$('.notifyjs-corner').empty();
-				$.notify("Showing other records", {className: "success", position: "bottom right", autoHideDelay: 1000});
+				if (show_notify) {
+					$('.notifyjs-corner').empty();
+					$.notify("Showing other records", {className: "success", position: "bottom right", autoHideDelay: 1000});
+				}
 			}
 			$("#show-others").trigger("change");
 
 		} else if (e.ctrlKey && e.key == "e") {
 			$('#inputdata').trigger('chosen:open');
+
+		} else if (e.ctrlKey && e.key == "m") {
+			show_notify = !show_notify;
 
 		} else if (e.key == "ArrowRight" || (e.ctrlKey && e.key == "l")) {
 			var to = $("#tabs").tabs('option', 'active')+1;
@@ -177,8 +191,10 @@ function setupKeys() {
 				// delete it and forbid setting it
 				if (e.key == k && v == $("#inputdata").val()) {
 					delete quickSwitch[k];
-					$('.notifyjs-corner').empty();
-					$.notify("Dataset shortcut " + e.key + " removed from the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
+					if (show_notify) {
+						$('.notifyjs-corner').empty();
+						$.notify("Dataset shortcut " + e.key + " removed from the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
+					}
 					setit = false;
 				}
 				// if another key is used on the current object
@@ -190,8 +206,10 @@ function setupKeys() {
 			
 			if (setit) {
 				quickSwitch[e.key] = $("#inputdata").val();
-				$('.notifyjs-corner').empty();
-				$.notify("Dataset shortcut " + e.key + " set on the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
+				if (show_notify) {
+					$('.notifyjs-corner').empty();
+					$.notify("Dataset shortcut " + e.key + " set on the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
+				}
 			}
 
 			// remove all key shortcuts from descriptions
@@ -218,8 +236,10 @@ function setupKeys() {
 			$("#inputdata").trigger("chosen:updated");
 			$("#inputdata").trigger("change");
 
-			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+quickSwitch[e.key]+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			if (show_notify) {
+				$('.notifyjs-corner').empty();
+				$.notify("Dataset: " + $('#inputdata option[value='+quickSwitch[e.key]+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
+			}
 		}
 	}
 }
