@@ -126,7 +126,7 @@ function setupKeys() {
 			$("#inputdata").trigger("change");
 
 			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "top right", autoHideDelay: 1000});
+			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
 
 		} else if (e.ctrlKey && (e.key == "n" || e.key == "j")) {
 			var to = parseInt($("#inputdata").val())+1;
@@ -136,17 +136,17 @@ function setupKeys() {
 			$("#inputdata").trigger("change");
 
 			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "top right", autoHideDelay: 1000});
+			$.notify("Dataset: " + $('#inputdata option[value='+to+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
 
 		} else if (e.ctrlKey && e.key == "o") {
 			if ($('#show-others').prop("checked")) {
 				$('#show-others').prop("checked", false);
 				$('.notifyjs-corner').empty();
-				$.notify("Other records hidden", {className: "success", position: "top right", autoHideDelay: 1000});
+				$.notify("Other records hidden", {className: "success", position: "bottom right", autoHideDelay: 1000});
 			} else {
 				$('#show-others').prop("checked", true);
 				$('.notifyjs-corner').empty();
-				$.notify("Showing other records", {className: "success", position: "top right", autoHideDelay: 1000});
+				$.notify("Showing other records", {className: "success", position: "bottom right", autoHideDelay: 1000});
 			}
 			$("#show-others").trigger("change");
 
@@ -177,7 +177,7 @@ function setupKeys() {
 				if (e.key == k && v == $("#inputdata").val()) {
 					delete quickSwitch[k];
 					$('.notifyjs-corner').empty();
-					$.notify("Dataset shortcut " + e.key + " removed from the current dataset.", {className: "success", position: "top right", autoHideDelay: 3000});
+					$.notify("Dataset shortcut " + e.key + " removed from the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
 					setit = false;
 				}
 				// if another key is used on the current object
@@ -190,7 +190,7 @@ function setupKeys() {
 			if (setit) {
 				quickSwitch[e.key] = $("#inputdata").val();
 				$('.notifyjs-corner').empty();
-				$.notify("Dataset shortcut " + e.key + " set on the current dataset.", {className: "success", position: "top right", autoHideDelay: 3000});
+				$.notify("Dataset shortcut " + e.key + " set on the current dataset.", {className: "success", position: "bottom right", autoHideDelay: 3000});
 			}
 
 			// remove all key shortcuts from descriptions
@@ -218,7 +218,7 @@ function setupKeys() {
 			$("#inputdata").trigger("change");
 
 			$('.notifyjs-corner').empty();
-			$.notify("Dataset: " + $('#inputdata option[value='+quickSwitch[e.key]+']').text() + "", {className: "success", position: "top right", autoHideDelay: 1000});
+			$.notify("Dataset: " + $('#inputdata option[value='+quickSwitch[e.key]+']').text() + "", {className: "success", position: "bottom right", autoHideDelay: 1000});
 		}
 	}
 }
