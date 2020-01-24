@@ -390,10 +390,17 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	var offload_nturbo_mix uint64 = (uint64(session.Npu.Nturbo_org) << 8) | uint64(session.Npu.Nturbo_rev)
 	offload_nturbo.AddOne(offload_nturbo_mix)
 
-	offload_fail.AddOne(session.NpuError.NoOffloadReason)
+	if session.NpuError.NoOffloadReason != "" {
+		offload_fail.AddOne(session.NpuError.NoOffloadReason)
+	}
 
-	offload_fail_org.AddOne(session.NpuError.Kernel_org + "/" + session.NpuError.Driver_org)
-	offload_fail_rev.AddOne(session.NpuError.Kernel_rev + "/" + session.NpuError.Driver_rev)
+	if (session.NpuError.Kernel_org != "" && session.NpuError.Driver_org != "") {
+		offload_fail_org.AddOne(session.NpuError.Kernel_org + "/" + session.NpuError.Driver_org)
+	}
+
+	if (session.NpuError.Kernel_rev != "" && session.NpuError.Driver_rev != "") {
+		offload_fail_rev.AddOne(session.NpuError.Kernel_rev + "/" + session.NpuError.Driver_rev)
+	}
 
 	tunnels_in.AddOne(session.Other.Tunnel_in)
 	tunnels_out.AddOne(session.Other.Tunnel_out)
@@ -945,7 +952,7 @@ func ProcessFinished() {
 	WriteSpace(f, "offload")
 
 	params["title"] = "NPU offload fail generic"
-	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no reason field, hence the session may be offloaded or it is not offloaded with no known reason."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Only sessions with non-empty field shown."
 	params["showOthers"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
@@ -953,23 +960,17 @@ func ProcessFinished() {
 	offload_fail.WriteData(f, params)
 
 	params["title"] = "NPU offload fail in forward direction"
-	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no fail field, hence the session may be offloaded or it is not offloaded with no known reason. Displayed as combined reason from kernel / driver."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
-	params["transform"] = func(o interface{})(string) {
-		if o.(string) == "/" { return "[no reason]"
-		} else { return transform_text(o) }
-	}
+	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
 	offload_fail_org.WriteData(f, params)
 
 	params["title"] = "NPU offload fail in reverse direction"
-	params["description"] = "The reason why the session could not be offloaded to NPU. Value \"[none]\" means there was no fail field, hence the session may be offloaded or it is not offloaded with no known reason. Displayed as combined reason from kernel / driver."
+	params["description"] = "The reason why the session could not be offloaded to NPU. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
-	params["transform"] = func(o interface{})(string) {
-		if o.(string) == "/" { return "[no reason]"
-		} else { return transform_text(o) }
-	}
+	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
 	offload_fail_rev.WriteData(f, params)
