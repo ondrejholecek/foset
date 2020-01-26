@@ -428,9 +428,15 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 		interfaces_rev_out.AddOne(session.Interfaces.Out_rev)
 	}
 
-	shapers_org.AddOne(session.Shaping.Shaper_org)
-	shapers_rev.AddOne(session.Shaping.Shaper_rev)
-	shapers_perip.AddOne(session.Shaping.Shaper_ip)
+	if session.Shaping.Shaper_org != "" {
+		shapers_org.AddOne(session.Shaping.Shaper_org)
+	}
+	if session.Shaping.Shaper_rev != "" {
+		shapers_rev.AddOne(session.Shaping.Shaper_rev)
+	}
+	if session.Shaping.Shaper_ip != "" {
+		shapers_perip.AddOne(session.Shaping.Shaper_ip)
+	}
 
 	return true
 }
@@ -692,6 +698,7 @@ func ProcessFinished() {
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["description"] = "Used helpers on sessions. Only session with helpers shown."
 	helpers.WriteData(f, params)
 
@@ -699,6 +706,7 @@ func ProcessFinished() {
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["description"] = "Sessions with authorized users. Only sessions with users shown."
 	users.WriteData(f, params)
 
@@ -708,11 +716,13 @@ func ProcessFinished() {
 	params["title"] = "TCP source ports"
 	params["description"] = "Source TCP ports used by the clients."
 	params["transform"] = nil
+	params["showSummary"] = true
 	params["valueformat"] = "number"
 	tcpsrcports.WriteData(f, params)
 
 	params["title"] = "TCP destination ports"
 	params["description"] = "Destination TCP ports used by the servers."
+	params["showSummary"] = true
 	params["transform"] = nil
 	params["valueformat"] = "number"
 	tcpdstports.WriteData(f, params)
@@ -720,6 +730,7 @@ func ProcessFinished() {
 	if use_complex_matching {
 		params["description"] = "Combinations of source and destionation TCP ports. This might be useful to locate sessions using static ports configuration."
 		params["title"] = "TCP source + destination ports"
+		params["showSummary"] = true
 		params["transform"] = transform_srcdstport
 		params["valueformat"] = "number"
 		tcpsrcdstports.WriteData(f, params)
@@ -729,12 +740,14 @@ func ProcessFinished() {
 
 	params["title"] = "UDP source ports"
 	params["description"] = "Source UDP ports used by the clients."
+	params["showSummary"] = true
 	params["transform"] = nil
 	params["valueformat"] = "number"
 	udpsrcports.WriteData(f, params)
 
 	params["title"] = "UDP destination ports"
 	params["description"] = "Destination UDP ports used by the clients."
+	params["showSummary"] = true
 	params["transform"] = nil
 	params["valueformat"] = "number"
 	udpdstports.WriteData(f, params)
@@ -742,6 +755,7 @@ func ProcessFinished() {
 	if use_complex_matching {
 		params["title"] = "UDP source + destination ports"
 		params["description"] = "Combinations of source and destionation UDP ports. This might be useful to locate sessions using static ports configuration."
+		params["showSummary"] = true
 		params["transform"] = transform_srcdstport
 		params["valueformat"] = "number"
 		udpsrcdstports.WriteData(f, params)
@@ -754,12 +768,14 @@ func ProcessFinished() {
 
 	params["title"] = "Source networks"
 	params["description"] = fmt.Sprintf("Sessions originating from clients. Grouped by the network prefix specified in the plugin configuration (/%d in this case).", srcprefix)
+	params["showSummary"] = false
 	params["transform"] = transform_srcnet
 	params["valueformat"] = "number"
 	srcnetworks.WriteData(f, params)
 
 	params["title"] = "Destination networks"
 	params["description"] = fmt.Sprintf("Sessions connected to servers. Grouped by the network prefix specified in the plugin configuration (/%d in this case).", dstprefix)
+	params["showSummary"] = false
 	params["transform"] = transform_dstnet
 	params["valueformat"] = "number"
 	dstnetworks.WriteData(f, params)
@@ -767,6 +783,7 @@ func ProcessFinished() {
 	if use_complex_matching {
 		params["title"] = "Source + destination networks"
 		params["description"] = fmt.Sprintf("Sessions between specific clients and servers. Grouped by the network prefix specified in the plugin configuration (/%d for source and /%d for destination IP in this case).", srcprefix, dstprefix)
+		params["showSummary"] = false
 		params["transform"] = transform_srcdstnet
 		params["valueformat"] = "number"
 		srcdstnetworks.WriteData(f, params)
@@ -778,12 +795,14 @@ func ProcessFinished() {
 
 	params["title"] = "Upload rate from source networks"
 	params["description"] = fmt.Sprintf("Total rate of all clients uploading the data. Grouped by the source network prefix specified in plugin configuration (/%d in this case). Be aware that hardware accelerated sessions may not be counted correctly.", srcprefix)
+	params["showSummary"] = true
 	params["transform"] = transform_srcnet
 	params["valueformat"] = "rate"
 	srcnetworks_rate.WriteData(f, params)
 
 	params["title"] = "Download rate from destination networks"
 	params["description"] = fmt.Sprintf("Total rate of all servers sending the data (clients downloading). Grouped by the destination network prefix specified in plugin configuration (/%d in this case). Be aware that hardware accelerated sessions may not be counted correctly.", dstprefix)
+	params["showSummary"] = true
 	params["transform"] = transform_dstnet
 	params["valueformat"] = "rate"
 	dstnetworks_rate.WriteData(f, params)
@@ -793,6 +812,7 @@ func ProcessFinished() {
 		params["valueformat"] = "rate"
 		params["title"] = "Summary rate between source+destination networks"
 		params["description"] = fmt.Sprintf("Summarized rate of upload and download traffic between clients and servers.. Grouped by the network prefix specified in the plugin configuration (/%d for source and /%d for destination IP in this case). Be aware that hardware accelerated sessions may not be counted correctly.", srcprefix, dstprefix)
+		params["showSummary"] = true
 		srcdstnetworks_rate.WriteData(f, params)
 	} else {
 		WriteSpace(f, "data-rates")
@@ -802,12 +822,14 @@ func ProcessFinished() {
 
 	params["title"] = "Bytes sent from source networks"
 	params["description"] = "Number of bytes already sent by clients in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
+	params["showSummary"] = true
 	params["transform"] = transform_srcnet
 	params["valueformat"] = "size"
 	srcnetworks_bytes.WriteData(f, params)
 
 	params["title"] = "Bytes received from destination networks"
 	params["description"] = "Number of bytes already sent by servers (received by clients) in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
+	params["showSummary"] = true
 	params["transform"] = transform_dstnet
 	params["valueformat"] = "size"
 	dstnetworks_bytes.WriteData(f, params)
@@ -817,6 +839,7 @@ func ProcessFinished() {
 		params["valueformat"] = "size"
 		params["title"] = "Bytes exchanged between source+destination networks"
 		params["description"] = "Sum of bytes already exchanged between clients and servers in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
+		params["showSummary"] = true
 		srcdstnetworks_bytes.WriteData(f, params)
 	} else {
 		WriteSpace(f, "packet-counts-and-bytes")
@@ -824,18 +847,21 @@ func ProcessFinished() {
 
 	params["title"] = "Packets sent from source networks"
 	params["description"] = "Number of packets already sent by clients in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
+	params["showSummary"] = true
 	params["transform"] = transform_srcnet
 	params["valueformat"] = "number"
 	srcnetworks_counts.WriteData(f, params)
 
 	params["title"] = "Packets received from destination networks"
 	params["description"] = "Number of packets already sent by servers (received by clients) in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
+	params["showSummary"] = true
 	params["transform"] = transform_dstnet
 	params["valueformat"] = "number"
 	dstnetworks_counts.WriteData(f, params)
 
 	if use_complex_matching {
 		params["transform"] = transform_srcdstnet
+		params["showSummary"] = true
 		params["valueformat"] = "number"
 		params["title"] = "Packets exchanged between source+destination networks"
 		params["description"] = "Sum of packets already exchanged between clients and servers in the established sessions. Be careful because the already closed sessions are not calculated. Be aware that hardware accelerated sessions may not be counted correctly."
@@ -846,12 +872,14 @@ func ProcessFinished() {
 
 	params["title"] = "Errors from source networks"
 	params["description"] = ""
+	params["showSummary"] = true
 	params["transform"] = transform_srcnet
 	params["valueformat"] = "number"
 	srcnetworks_errs.WriteData(f, params)
 
 	params["title"] = "Errors from destination networks"
 	params["description"] = ""
+	params["showSummary"] = true
 	params["transform"] = transform_dstnet
 	params["valueformat"] = "number"
 	dstnetworks_errs.WriteData(f, params)
@@ -861,6 +889,7 @@ func ProcessFinished() {
 		params["valueformat"] = "number"
 		params["title"] = "Errors summary between source+destination networks"
 		params["description"] = ""
+		params["showSummary"] = true
 		srcdstnetworks_errs.WriteData(f, params)
 	} else {
 		WriteSpace(f, "packet-counts-and-bytes")
@@ -871,6 +900,7 @@ func ProcessFinished() {
 	params["valueformat"] = "number"
 
 	params["title"] = "Incoming interface in original direction"
+	params["showSummary"] = false
 	if translate_interfaces {
 		params["description"] = "Index of the interface that the packets are received from in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
 		params["transform"] = transform_text
@@ -881,6 +911,7 @@ func ProcessFinished() {
 	interfaces_org_in.WriteData(f, params)
 
 	params["title"] = "Outgoing interface in original direction"
+	params["showSummary"] = false
 	if translate_interfaces {
 		params["description"] = "Index of the interface that the packets are sent to in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
 		params["transform"] = transform_text
@@ -893,6 +924,7 @@ func ProcessFinished() {
 	WriteSpace(f, "interfaces")
 
 	params["title"] = "Incoming interface in reverse direction"
+	params["showSummary"] = false
 	if translate_interfaces {
 		params["description"] = "Index of the interface that the packets are received from in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
 		params["transform"] = transform_text
@@ -903,6 +935,7 @@ func ProcessFinished() {
 	interfaces_rev_in.WriteData(f, params)
 
 	params["title"] = "Outgoing interface in reverse direction"
+	params["showSummary"] = false
 	if translate_interfaces {
 		params["description"] = "Index of the interface that the packets are sent to in the reverse session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
 		params["transform"] = transform_text
@@ -918,9 +951,11 @@ func ProcessFinished() {
 	params["valueformat"] = "number"
 	params["title"] = "Next hop in original direction"
 	params["description"] = "IP address of the next hop in the original session direction. This should match the routing table."
+	params["showSummary"] = false
 	nexthop_org.WriteData(f, params)
 	params["title"] = "Next hop in reverse direction"
 	params["description"] = "IP address of the next hop in the reverse session direction. This should reversely match the routing table."
+	params["showSummary"] = false
 	nexthop_rev.WriteData(f, params)
 
 	// Durations & timeouts
@@ -928,6 +963,7 @@ func ProcessFinished() {
 
 	params["title"] = "Session time"
 	params["description"] = "How long the session is already active."
+	params["showSummary"] = false
 	params["transform"] = transform_lifetime
 	params["valueformat"] = "number"
 	params["sortByKey"] = true
@@ -935,6 +971,7 @@ func ProcessFinished() {
 
 	params["title"] = "Session TTLs"
 	params["description"] = "Initial TTLs configured for the sessions. Already closed sessions are of course not included."
+	params["showSummary"] = false
 	params["showOthers"] = true
 	params["transform"] = nil
 	params["valueformat"] = "number"
@@ -947,6 +984,7 @@ func ProcessFinished() {
 	params["title"] = "NPU offload"
 	params["description"] = "Sessions offloaded to NPU hardware. Session can be fully offloaded in both directions or artially just in one direction (or not offloaded at all). Partial offload for UDP is usually caused by the traffic flowing only in a single direction."
 	params["showOthers"] = false
+	params["showSummary"] = false
 	params["transform"] = transform_offload
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -955,6 +993,7 @@ func ProcessFinished() {
 	params["title"] = "nTurbo offload"
 	params["description"] = "Sessions accelerated by nTurbo hardware. Eleigible sessions are those that would be offloaded if they didn't have UTM profiles and they have flow-based UTM profile configured."
 	params["showOthers"] = false
+	params["showSummary"] = false
 	params["transform"] = transform_offload
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -965,6 +1004,7 @@ func ProcessFinished() {
 	params["title"] = "NPU offload fail generic"
 	params["description"] = "The reason why the session could not be offloaded to NPU. Only sessions with non-empty field shown."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -973,6 +1013,7 @@ func ProcessFinished() {
 	params["title"] = "NPU offload fail in forward direction"
 	params["description"] = "The reason why the session could not be offloaded to NPU. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -981,6 +1022,7 @@ func ProcessFinished() {
 	params["title"] = "NPU offload fail in reverse direction"
 	params["description"] = "The reason why the session could not be offloaded to NPU. Displayed as combined reason from kernel / driver."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -992,6 +1034,7 @@ func ProcessFinished() {
 	params["title"] = "Incoming from tunnel"
 	params["description"] = "Sessions traffic received inside a tunnel."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1000,6 +1043,7 @@ func ProcessFinished() {
 	params["title"] = "Outgoing to tunnel"
 	params["description"] = "Sessions that send traffic through a tunnel."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1011,6 +1055,7 @@ func ProcessFinished() {
 	params["title"] = "Shaper in original direction"
 	params["description"] = "Number of session with traffic shaper applied on the original direction."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1019,6 +1064,7 @@ func ProcessFinished() {
 	params["title"] = "Shaper in reverse direction"
 	params["description"] = "Number of session with traffic shaper applied on the reverse direction."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1027,6 +1073,7 @@ func ProcessFinished() {
 	params["title"] = "Per-IP shaper"
 	params["description"] = "Number of session with traffic shaper applied per IP."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_text
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1038,6 +1085,7 @@ func ProcessFinished() {
 	params["title"] = "IP used as source NAT"
 	params["description"] = "IP address that FortiGate selected as the source address when applying source NAT."
 	params["showOthers"] = true
+	params["showSummary"] = false
 	params["transform"] = func(s interface{})(string) {
 		if s.(uint32) == 0 { return "No source NAT"
 		} else { return transform_ip(s) }
@@ -1049,6 +1097,7 @@ func ProcessFinished() {
 	params["title"] = "Port used as source NAT"
 	params["description"] = "Port number that FortiGate selected as the source address when applying source NAT."
 	params["showOthers"] = true
+	params["showSummary"] = false
 	params["transform"] = func(s interface{})(string) {
 		port := s.(uint16)
 		if port == 0 { return "No source NAT"
@@ -1062,6 +1111,7 @@ func ProcessFinished() {
 		params["title"] = "IP/port combination used as source NAT"
 		params["description"] = "IP address and port number that FortiGate selected as the source address when applying source NAT."
 		params["showOthers"] = true
+		params["showSummary"] = false
 		params["transform"] = func(s interface{})(string) {
 			port := s.(uint64)
 			if port == 0 { return "No source NAT"
@@ -1080,6 +1130,7 @@ func ProcessFinished() {
 	params["title"] = "TCP client to FortiGate session state"
 	params["description"] = "TCP session state for the 'left' session - the session between client and FortiGate."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_tcp_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1088,6 +1139,7 @@ func ProcessFinished() {
 	params["title"] = "TCP FortiGate to server session state"
 	params["description"] = "TCP session state for the 'right' session - the session between FortiGate and server."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_tcp_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1096,6 +1148,7 @@ func ProcessFinished() {
 	params["title"] = "TCP combined session state"
 	params["description"] = "TCP session state for both 'left' and 'right' sessions."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_tcp_combined_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1104,6 +1157,7 @@ func ProcessFinished() {
 	params["title"] = "UDP client to FortiGate session state"
 	params["description"] = "UDP session state for the 'left' session - the session between client and FortiGate."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_udp_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1112,6 +1166,7 @@ func ProcessFinished() {
 	params["title"] = "UDP FortiGate to server session state"
 	params["description"] = "UDP session state for the 'right' session - the session between FortiGate and server."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_udp_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false
@@ -1120,6 +1175,7 @@ func ProcessFinished() {
 	params["title"] = "UDP combined session state"
 	params["description"] = "UDP session state for both 'left' and 'right' sessions."
 	params["showOthers"] = true
+	params["showSummary"] = true
 	params["transform"] = transform_udp_combined_session_state
 	params["valueformat"] = "number"
 	params["sortByKey"] = false

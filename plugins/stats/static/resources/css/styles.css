@@ -109,7 +109,11 @@ canvas.graph { width: 100% }
 
 /* Graphs title and description text. */
 div.graphContainer h2 { text-align: center }
-div.graphContainer p  { text-align: center }
+div.graphContainer p.description  { text-align: center }
+div.graphContainer p.summary {
+	text-align: center;
+	margin-top: 0;
+}
 
 
 /* Allow some space between graphs so the text do not touch. */

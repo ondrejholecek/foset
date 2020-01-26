@@ -40,6 +40,9 @@ function initScreen(showData, showOthers) {
 		var canvas = document.createElement("canvas");
 		canvas.setAttribute('class', 'graph');
 		div.appendChild(canvas);
+		var summary  = document.createElement("p");
+		summary.setAttribute('class', 'summary');
+		div.appendChild(summary);
 		block = $(div);
 		$("div #" + showData["data"][data]["tab"]).append(block);
 	}
@@ -75,6 +78,9 @@ function plotGraphs(showData, showOthers) {
 				var canvas = block.find("canvas")[0];
 				block.find("p.description").text(showData["data"][data]["desc"])
 				block.find("h2").text(showData["data"][data]["title"])
+				if (typeof showData["data"][data]["sum"] !== 'undefined' && showData["data"][data]["sum"] > 0) {
+					block.find("p.summary").text("Total: " + formatters[g_format](showData["data"][data]["sum"]))
+				}
 
 				if (typeof existing_graphs[data] === 'undefined') {
 					// first init

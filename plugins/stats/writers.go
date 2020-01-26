@@ -30,6 +30,12 @@ func WriteSimpleData(c *Counter, w io.Writer, params map[string]interface{}) {
 		showOthers = params["showOthers"].(bool)
 	}
 
+	// show summary?
+	var showSummary bool
+	if params["showSummary"] != nil {
+		showSummary = params["showSummary"].(bool)
+	}
+
 	// write descrition
 	var description string
 	if params["description"] != nil {
@@ -63,6 +69,8 @@ func WriteSimpleData(c *Counter, w io.Writer, params map[string]interface{}) {
 
 	sort.Sort(c)
 
+	var summary uint64
+
 	var max int = c.Len()
 	if top < max { max = top }
 
@@ -86,21 +94,23 @@ func WriteSimpleData(c *Counter, w io.Writer, params map[string]interface{}) {
 
 		//
 		data[i]   = fmt.Sprintf("%d", count)
+		summary   += count
 	}
 
 	// summarize others
+	var sumOthers, items uint64
+
+	for i := max; i < c.Len(); i++ {
+		_, count := c.GetRevIndex(i)
+		sumOthers += count
+		summary   += count
+		items     += 1
+	}
+
 	if showOthers {
-		var sum, items uint64
-
-		for i := max; i < c.Len(); i++ {
-			_, count := c.GetRevIndex(i)
-			sum += count
-			items += 1
-		}
-
 		if items > 0 {
 			labels = append(labels, fmt.Sprintf("+ %d others", items))
-			data   = append(data, fmt.Sprintf("%d", sum))
+			data   = append(data, fmt.Sprintf("%d", sumOthers))
 		}
 	}
 
@@ -112,6 +122,9 @@ func WriteSimpleData(c *Counter, w io.Writer, params map[string]interface{}) {
 	fmt.Fprintf(w, "current.data.%s.format = \"%s\";\n", c.name, valueformat)
 	fmt.Fprintf(w, "current.data.%s.title  = \"%s\";\n", c.name, title)
 	fmt.Fprintf(w, "current.data.%s.tab    = \"%s\";\n", c.name, tab)
+	if showSummary {
+		fmt.Fprintf(w, "current.data.%s.sum    = %d;\n", c.name, summary)
+	}
 	fmt.Fprintf(w, "current.order.push(\"%s\");\n", c.name)
 }
 
