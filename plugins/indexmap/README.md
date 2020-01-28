@@ -77,7 +77,7 @@ line.
 
 Interface name(s) are saved in the custom fields `iface[oi]`, `iface[oi]`, `iface[oo]`, `iface[ri]`, `iface[ir]`, 
 `iface[ro]`, `iface[or]` which have the same meaning as the similar fields in the
-[formatter string](https://github.com/ondrejholecek/fortisession/blob/master/fortiformatter/output_format.md), but are 
+[formatter string](/fortisession/fortiformatter), but are 
 completely independent on them. If the interface name is not found, the original index number is stored as a string.
 
 File's contents should be like following one:
