@@ -29,7 +29,9 @@ These features can be easily used via the [Foset plugin system](/plugins).
 
 ## Examples
 
-**Note: If neither `-r` nor `--file` options are specified, Foset will try to read the plain-text sessions from standard output. Usually this is not what you want.**
+*Please note that some CLI commands are quite long. They should be still written on the same line, but here in the
+examples I sometimes use `\` at the end of the first line and continue with the command on the second line. This is
+just to improve readbility of the examples.*
 
 ### default output from compressed session file
 
@@ -138,7 +140,8 @@ $ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' -f 'nhost 0.0.0.0 an
 We are futher interested only in session allowed by firewall policy 4 in root VDOM (0 in this case):
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' -f 'nhost 0.0.0.0 and proto tcp and policy 4 and vdom 0'
+$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' \
+  -f 'nhost 0.0.0.0 and proto tcp and policy 4 and vdom 0'
 
 68fb0e9e:   0/4     TCP         NONE/ESTABLISHED 172.26.81.24:4125     -> 10.109.19.170:22      0.0.0.0:0
 68ffb713:   0/4     TCP         NONE/ESTABLISHED 172.26.48.47:63579    -> 10.109.16.84:443      0.0.0.0:0
@@ -155,7 +158,8 @@ $ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' -f 'nhost 0.0.0.0 an
 And let's check only those that are in time-wait state:
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' -f 'nhost 0.0.0.0 and proto tcp and policy 4 and vdom 0 and status time-wait'
+$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${nap}' \
+  -f 'nhost 0.0.0.0 and proto tcp and policy 4 and vdom 0 and status time-wait'
 
 68ffb67c:   0/4     TCP         NONE/TIME_WAIT   172.26.48.9:53810     -> 10.109.16.30:443      0.0.0.0:0
 68ffb66c:   0/4     TCP         NONE/TIME_WAIT   172.26.48.9:53809     -> 10.109.16.220:443     0.0.0.0:0
@@ -260,7 +264,8 @@ If we are interested in sessions where somebody is downloading faster than 1 meg
 *Note: keep in mind that Foset can only use the information present in the session list output - if the session if offloaded to NPU and it is not reporting the speed, this output will not be accurate.*
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${default_rate})' -f 'rate[d] >= 1 Mbps'
+$ foset -r /tmp/sessions.gz -g -o '${default_basic} ${default_rate})' \
+  -f 'rate[d] >= 1 Mbps'
 
 68ffb513:   0/i     TCP         NONE/ESTABLISHED 193.85.189.20:52946   -> 193.86.26.196:22      RATE(up:    43.120 Kbps, down:     1.540 Mbps))
 ```
@@ -270,14 +275,17 @@ The `i` instead of firewall policy ID means that the session is internal - creat
 Let's also display the download speed without units and in kilobytes per second - we use the `${rate[d]}` field directly, change format to decimal (`${rate[d]:d}`) from default string and say we want to have this is kBps (`${rate[d]:d|kBps`). 
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:d|kBps}' -f 'rate[d] >= 1 Mbps'
+$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:d|kBps}' \
+  -f 'rate[d] >= 1 Mbps'
+  
 68ffb513 4294967295 193.85.189.20:52946->193.86.26.196:22 Download:193
 ```
 
 Be careful to use the uppercase `B` for bytes and not the lowercase `b` for bits:
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:d|kbps}' -f 'rate[d] >= 1 Mbps'
+$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:d|kbps}' \
+ -f 'rate[d] >= 1 Mbps'
 
 68ffb513 4294967295 193.85.189.20:52946->193.86.26.196:22 Download:1540
 ```
@@ -285,7 +293,8 @@ $ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d
 If better precision is needed, float format can be used:
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:6.2f|kbps}' -f 'rate[d] >= 1 Mbps'
+$ foset -r /tmp/sessions.gz -g -o '${serial} ${policy} ${sdap} Download:${rate[d]:6.2f|kbps}' 
+ -f 'rate[d] >= 1 Mbps'
 
 68ffb513 4294967295 193.85.189.20:52946->193.86.26.196:22 Download:1540.44
 ```
@@ -346,7 +355,8 @@ $ foset -r /tmp/sessions.gz -g -o '${serial:08x} ${state|, |filter:npu,per_ip}'
 This of course does not prevent us from filtering on non-displayed state flags:
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${serial:08x} ${state|, |filter:npu,per_ip}' -f 'state has app_valid'
+$ foset -r /tmp/sessions.gz -g -o '${serial:08x} ${state|, |filter:npu,per_ip}' \
+ -f 'state has app_valid'
 
 68ffb6cf per_ip, npu
 68ffaf94 per_ip, npu
@@ -389,7 +399,8 @@ standalone web application.*
 Like in the following example where we are showing to 10 sessions sorted by download speed from fastest to slowest:
 
 ```
-$ foset -r /tmp/sessions.gz -g -o '${rate[d]:010d|bps} ${serial:08x} ${sdap:-45s} ${rate[d]}' | sort -n -r | head -10
+$ foset -r /tmp/sessions.gz -g -o '${rate[d]:010d|bps} ${serial:08x} ${sdap:-45s} ${rate[d]}' \
+  | sort -n -r | head -10
 
 0001540440 68ffb513 193.85.189.20:52946->193.86.26.196:22         1.540 Mbps
 0000124960 68ffb5b6 10.109.19.73:34520->209.222.147.40:443        124.960 Kbps
