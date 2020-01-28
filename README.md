@@ -12,9 +12,9 @@ All sessions can be displayed or only interesting sessions can be selected using
 
 Pre-built binaries are available for the most commonly used operating systems. Those are single executable files without any dependencies, that can be executed without any installation.
 
-- [Windows (64bit)](https://github.com/ondrejholecek/foset/raw/master/release/1.6/windows/foset.exe)
-- [Linux (64bit)](https://github.com/ondrejholecek/foset/raw/master/release/1.6/linux/foset)
-- [MacOS (64bit)](https://github.com/ondrejholecek/foset/raw/master/release/1.6/macos/foset)
+- [Windows (64bit)](/release/latest/windows/foset.exe?raw=true)
+- [Linux (64bit)](/release/latest/linux/foset?raw=true)
+- [MacOS (64bit)](/release/latest/macos/foset?raw=true)
 
 ## Plugins
 
