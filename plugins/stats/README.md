@@ -12,6 +12,10 @@ Plugin to generate many top-like graphs from various areas, like:
 - Session fully or partially offloaded
 - ... and more
 
+The statistics in the output are quite general by design It is expected that the user manually runs Foset with the filter 
+(`-f`) that is required. It can be even executed several times with different settings and outputs aggregated in the
+same output directory (see bellow).
+
 ## Output 
 
 The output is a completely independent HTML document (actually a directory) that can be copied and used even without
@@ -61,3 +65,24 @@ The IP (networks) and TCP/UDP ports statistics are usually shown in two graphs -
 one for destination networks or ports. It is also possible to generate additional graphs showing the communication
 between source and destination networks/ports but this is not always meaningful and uses extreme amount of RAM, therefore
 those graphs are disabled by default. To enable generating them, use the parameter `complex`.
+
+## Example
+
+If you are starting with a new statistics, delete the whole output directory, so the plugin can create and populate it
+correctly from scratch:
+
+```
+rm -rf /tmp/example
+```
+
+Then run Foset with stats plugin as many times as you want with different filter to have all the executions in the same
+output directory:
+
+```
+$ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example'
+$ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'host in 8.8.0.0/16'
+$ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'dport < 1024'
+$ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'dport < 1024 and not offloaded'
+```
+
+Open the `index.html` file in your favourite browser.
