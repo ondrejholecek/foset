@@ -9,6 +9,20 @@ and its specific parameters follow after `|`. Each parameter can have a value (l
 has `value2`), but it also can only be a boolean parameter - just enabling some feature without the need for value
 (like `noValueParameter` in the example above).
 
+## Internal plugins 
+
+Internal plugins are implemented inside the Foset source code and are automatically included in all the binary builds. 
+Such plugins are loaded using `-p` option and the name is always the plain plugin name without any path or file
+extension.
+
+Currently recognized (and described plugins):
+- [merge](/plugins/merge/): allows to merge a text file with additional data about the sessions that is loaded
+into specified custom variables
+- [indexmap](/plugins/indexmap/): with provided outputs of some addtional FortiGate commands it translates
+the VDOM and interface indexes into their real names
+- [stats](/plugins/stats/): creates a local webpage with a lot of top-X statistics about the session table in
+the form of beautiful graphs
+
 ## External plugins
 
 External plugins are loaded using '-P' (capital P). In that case the `name` can either be a full path to the plugin
@@ -25,18 +39,3 @@ Source code for external plugins may not be published anywhere and such plugins 
 binary form. The compatibility with the main Foset binary is not guaranteed between versions, however it should
 be compatible as long as the internal Session structure is not changed. In case of incompatibility, the system
 does not allow to use the incompatible external plugin.
-
-
-## Internal plugins 
-
-Internal plugins are implemented inside the Foset source code and are automatically included in all the binary builds. 
-Such plugins are loaded using `-p` option and the name is always the plain plugin name without any path or file
-extension.
-
-Currently recognized (and described plugins):
-- [merge](/plugins/merge/): allows to merge a text file with additional data about the sessions that is loaded
-into specified custom variables
-- [indexmap](/plugins/indexmap/): with provided outputs of some addtional FortiGate commands it translates
-the VDOM and interface indexes into their real names
-- [stats](/plugins/stats/): creates a local webpage with a lot of top-X statistics about the session table in
-the form of beautiful graphs
