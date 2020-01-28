@@ -85,4 +85,4 @@ $ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'dport < 1024'
 $ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'dport < 1024 and not offloaded'
 ```
 
-Open the `index.html` file in your favourite browser.
+Open the `/tmo/example/index.html` file in your favourite browser.
