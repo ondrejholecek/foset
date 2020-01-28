@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"strconv"
 	"encoding/binary"
-	"fortisession"
+	"foset/fortisession"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
 	"net"

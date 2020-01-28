@@ -19,7 +19,7 @@ import (
 	"os"
 	"math/rand"
 	"fmt"
-	"fortisession"
+	"foset/fortisession"
 	"io"
 )
 

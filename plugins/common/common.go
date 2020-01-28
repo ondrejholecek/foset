@@ -6,7 +6,7 @@ package plugin_common
 import (
 	"strings"
 	"strconv"
-	"fortisession"
+	"foset/fortisession"
 )
 
 // Hooks specify the plugin callbacks.

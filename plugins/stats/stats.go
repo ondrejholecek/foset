@@ -14,7 +14,7 @@ import (
 	"time"
 	"encoding/binary"
 	"sync/atomic"
-	"fortisession"
+	"foset/fortisession"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
 )

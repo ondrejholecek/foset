@@ -12,15 +12,14 @@ import (
 	"fmt"
 	"runtime"
 	"foset/plugins/common"
-	"fortisession"
-	"fortisession/fortiformatter"
-	"fortisession/forticonditioner"
+	"foset/fortisession"
+	"foset/fortisession/fortiformatter"
+	"foset/fortisession/forticonditioner"
 	"github.com/pkg/profile"
 )
 
 var mainVersion string
 var fosetGitCommit          string
-var fortisessionGitCommit   string
 
 var log = loggo.GetLogger("foset")
 
@@ -28,7 +27,7 @@ func main() {
 	// read arguments
 	parser := argparse.NewParser("foset", "Parses the FortiOS session list. Written by Ondrej Holecek <oholecek@fortinet.com>.")
 	version    := parser.Flag(  "v", "version",  &argparse.Options{Default: false,            Help: "Print current version"})
-	filename   := parser.String("r", "file",     &argparse.Options{Required: true,            Help: "File containing the session list, use \"-\" for stdin"})
+	filename   := parser.String("r", "file",     &argparse.Options{Default: "",               Help: "File containing the session list, use \"-\" for stdin"})
 	output     := parser.String("o", "output",   &argparse.Options{Default: "${default_basic}", Help: "Format of the output"})
 	filter     := parser.String("f", "filter",   &argparse.Options{Default: "",               Help: "Show only sessions matching filter"})
 	debug      := parser.Flag(  "d", "debug",    &argparse.Options{Default: false,            Help: "Print also debugging outputs"})
@@ -57,9 +56,13 @@ func main() {
 		fmt.Printf("This software is governed by the CC BY-ND 4.0 license.\n")
 		fmt.Printf("Make sure you understand the license before modifying the code!\n")
 		fmt.Printf("(https://creativecommons.org/licenses/by-nd/4.0/)\n\n")
-		fmt.Printf("Main program         : %s\n", fosetGitCommit)
-		fmt.Printf("Fortisession library : %s\n", fortisessionGitCommit)
+		fmt.Printf("Git commit : %s\n", fosetGitCommit)
 		os.Exit(0)
+	}
+
+	if *filename == "" {
+		fmt.Println("File parameter required\nUse -h for help")
+		os.Exit(1)
 	}
 
 	if *profiler == "cpu" {

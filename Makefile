@@ -1,7 +1,6 @@
-MAIN_VERSION=1.6
+MAIN_VERSION=$(shell cat VERSION.txt)
 FOSET_GIT_COMMIT := $(shell git rev-list -1 HEAD)
-FORTISESSION_GIT_COMMIT := $(shell cd ../fortisession/; git rev-list -1 HEAD)
-LDFLAGS=-ldflags="-s -w -X main.fosetGitCommit=$(FOSET_GIT_COMMIT) -X main.fortisessionGitCommit=$(FORTISESSION_GIT_COMMIT) -X main.mainVersion=$(MAIN_VERSION)"
+LDFLAGS=-ldflags="-s -w -X main.fosetGitCommit=$(FOSET_GIT_COMMIT) -X main.mainVersion=$(MAIN_VERSION)"
 RELEASE_DIR=release/$(MAIN_VERSION)
 
 all: local

@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"fortisession"
+	"foset/fortisession"
 	"strings"
 	"plugin"
 	"os"

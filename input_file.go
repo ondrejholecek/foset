@@ -13,10 +13,10 @@ import (
 	"sync/atomic"
 	"container/list"
 	"compress/gzip"
-	"fortisession"
-	"fortisession/safequeue"
+	"foset/fortisession"
+	"foset/fortisession/safequeue"
 	"foset/plugins/common"
-	"fortisession/forticonditioner"
+	"foset/fortisession/forticonditioner"
 )
 
 // global processing struct to allow many gorutines to work at the same time

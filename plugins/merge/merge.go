@@ -9,8 +9,8 @@ import (
 	"strings"
 	"bufio"
 	"strconv"
-	"fortisession"
-	"fortisession/multivalue"
+	"foset/fortisession"
+	"foset/fortisession/multivalue"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
 )
