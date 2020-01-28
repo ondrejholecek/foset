@@ -62,6 +62,7 @@ var shapers_org, shapers_rev, shapers_perip *Counter
 
 var tunnels_in, tunnels_out *Counter
 var interfaces_org_in, interfaces_org_out, interfaces_rev_in, interfaces_rev_out *Counter
+var interfaces_org_inout, interfaces_rev_inout *Counter
 var nexthop_org, nexthop_rev *Counter
 
 var offload_npu, offload_nturbo *Counter
@@ -216,8 +217,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	tunnels_out           = CounterInit("tunnel_out", WriteSimpleData)
 	interfaces_org_in     = CounterInit("interface_org_in", WriteSimpleData)
 	interfaces_org_out    = CounterInit("interface_org_out", WriteSimpleData)
+	interfaces_org_inout  = CounterInit("interface_org_inout", WriteSimpleData)
 	interfaces_rev_in     = CounterInit("interface_rev_in", WriteSimpleData)
 	interfaces_rev_out    = CounterInit("interface_rev_out", WriteSimpleData)
+	interfaces_rev_inout  = CounterInit("interface_rev_inout", WriteSimpleData)
 	shapers_org           = CounterInit("shaper_org", WriteSimpleData)
 	shapers_rev           = CounterInit("shaper_rev", WriteSimpleData)
 	shapers_perip         = CounterInit("shaper_perip", WriteSimpleData)
@@ -419,13 +422,17 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	if translate_interfaces {
 		interfaces_org_in.AddOne(session.Custom["iface[oi]"].AsString())
 		interfaces_org_out.AddOne(session.Custom["iface[oo]"].AsString())
+		interfaces_org_inout.AddOne(session.Custom["iface[oi]"].AsString() + " -> " + session.Custom["iface[oo]"].AsString())
 		interfaces_rev_in.AddOne(session.Custom["iface[ri]"].AsString())
 		interfaces_rev_out.AddOne(session.Custom["iface[ro]"].AsString())
+		interfaces_rev_inout.AddOne(session.Custom["iface[ri]"].AsString() + " -> " + session.Custom["iface[ro]"].AsString())
 	} else {
 		interfaces_org_in.AddOne(session.Interfaces.In_org)
 		interfaces_org_out.AddOne(session.Interfaces.Out_org)
+		interfaces_org_inout.AddOne(fmt.Sprintf("%d -> %d", session.Interfaces.In_org, session.Interfaces.Out_org))
 		interfaces_rev_in.AddOne(session.Interfaces.In_rev)
 		interfaces_rev_out.AddOne(session.Interfaces.Out_rev)
+		interfaces_rev_inout.AddOne(fmt.Sprintf("%d -> %d", session.Interfaces.In_rev, session.Interfaces.Out_rev))
 	}
 
 	if session.Shaping.Shaper_org != "" {
@@ -902,7 +909,7 @@ func ProcessFinished() {
 	params["title"] = "Incoming interface in original direction"
 	params["showSummary"] = false
 	if translate_interfaces {
-		params["description"] = "Index of the interface that the packets are received from in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["description"] = "Interface that the packets are received from in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
 		params["transform"] = transform_text
 	} else {
 		params["description"] = "Index of the interface that the packets are received from in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
@@ -913,7 +920,7 @@ func ProcessFinished() {
 	params["title"] = "Outgoing interface in original direction"
 	params["showSummary"] = false
 	if translate_interfaces {
-		params["description"] = "Index of the interface that the packets are sent to in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["description"] = "Interface that the packets are sent to in the original session direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
 		params["transform"] = transform_text
 	} else {
 		params["description"] = "Index of the interface that the packets are sent to in the original session direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
@@ -921,7 +928,16 @@ func ProcessFinished() {
 	}
 	interfaces_org_out.WriteData(f, params)
 
-	WriteSpace(f, "interfaces")
+	params["title"] = "Incoming to outgoing in original direction"
+	params["showSummary"] = false
+	if translate_interfaces {
+		params["description"] = "Incoming and outgoing interfaces in the original direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Incoming and outgoing interfaces indexes in the original direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = transform_text
+	}
+	interfaces_org_inout.WriteData(f, params)
 
 	params["title"] = "Incoming interface in reverse direction"
 	params["showSummary"] = false
@@ -944,6 +960,17 @@ func ProcessFinished() {
 		params["transform"] = nil
 	}
 	interfaces_rev_out.WriteData(f, params)
+
+	params["title"] = "Incoming to outgoing in reverse direction"
+	params["showSummary"] = false
+	if translate_interfaces {
+		params["description"] = "Incoming and outgoing interfaces in the reverse direction. Provided output of `diagnose netlink interface list` command is used to show interface's name."
+		params["transform"] = transform_text
+	} else {
+		params["description"] = "Incoming and outgoing interfaces indexes in the reverse direction. To translate the index to name, output of `diagnose netlink interface list` command is needed."
+		params["transform"] = transform_text
+	}
+	interfaces_rev_inout.WriteData(f, params)
 
 	// Next hops 
 	params["tab"] = "next-hops"
