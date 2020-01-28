@@ -16,6 +16,17 @@ Pre-built binaries are available for the most commonly used operating systems. T
 - [Linux (64bit)](https://github.com/ondrejholecek/foset/raw/master/release/1.6/linux/foset)
 - [MacOS (64bit)](https://github.com/ondrejholecek/foset/raw/master/release/1.6/macos/foset)
 
+## Plugins
+
+Foset core only contains functions for parsing the session dump, filtering it and priting the selected fields in the
+chosen format. 
+
+While this is extremely useful and it the main reason why Foset was written, there are also some advanced features that 
+can be quite useful too. Such features include mapping the number indexes (like interfaces' or VDOMs') to their real 
+human readable names or creating beautiful HTML statistics pages with many different graphs and comparing them visually.
+
+These features can be easily used via the [Foset plugin system](/plugins).
+
 ## Examples
 
 **Note: If neither `-r` nor `--file` options are specified, Foset will try to read the plain-text sessions from standard output. Usually this is not what you want.**
