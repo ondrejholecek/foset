@@ -29,7 +29,7 @@ The name can have an optional suffix specifying the type of the column. Followin
 Column names are then used as the names of the custom parameters. Identified by `custom` keyword in filter strings (`-f`, 
 example `-f 'custom department = IT'`) or in the output formatter strings (`-o`, example `-o '${custom|department}'`).
 
-## Example
+## Basic example
 
 To load data from a file `additional.txt` which contains the column delimited by space, where the first column
 is the session serial number in hexadecimal format (can have optional `0x` prefix), the second column is a text
@@ -108,3 +108,59 @@ $ foset -r sessions.txt -p 'merge|file=additional.txt,1=serial%x,2=department,3=
 68ff9370:   0/39    UDP         SEEN/UNSEEN      10.109.250.110:23432  -> 96.45.33.65:53        Sales 3
 ```
   
+## Another example: find the sessions that were removed
+
+This plugin can also be useful when you (for example) need to identify sessions that we terminated (and removed)
+between two session table dumps (files "first" and "second" in this example).
+
+### Save only session IDs from the later session dump
+
+```
+$ foset -r /tmp/second -o '${serial}' >/tmp/later_serials
+```
+
+To check how the file looks like:
+
+```
+[...]
+6fdb7e5b
+6fdb8311
+6fdb9005
+6fdb81cc
+6fdba753
+6fdb9ece
+[...]
+```
+
+### Show sessions from the first session dump with serials from the second dump
+
+This step can be skipped, here it is just for demonstration purposes.
+
+```
+$ foset -r /tmp/first -p 'merge|file=/tmp/later_serials,1=serial%x'  -o '${default_basic} ${custom:x|serial}'
+
+6fdb2580:   0/45    UDP         SEEN/UNSEEN      10.109.16.112:3343    -> 208.91.112.52:53      6fdb2580
+6fdb8e4b:   0/11    UDP         SEEN/UNSEEN      10.109.20.114:16027   -> 8.8.8.8:53            6fdb8e4b
+6fdb5ecd:   0/39    UDP         SEEN/UNSEEN      10.109.250.106:38853  -> 111.108.191.85:53     0
+6fdb75ef:   0/39    UDP         SEEN/UNSEEN      10.109.250.104:63632  -> 208.91.112.52:53      6fdb75ef
+6fdb7d82:   0/11    UDP         SEEN/UNSEEN      10.109.19.164:39652   -> 213.34.171.254:6881   6fdb7d82
+6fdb72aa:   0/11    UDP         SEEN/UNSEEN      10.109.20.114:13179   -> 8.8.8.8:53            0
+6fdb0b72:   0/45    UDP         SEEN/UNSEEN      10.109.20.78:1559     -> 45.75.200.89:53       6fdb0b72
+6fd973d5:   0/12    UDP         SEEN/UNSEEN      10.109.52.4:1350      -> 10.109.3.14:53        6fd973d5
+```
+
+The sessions that are in both files will have the same first and last column. Session with `0` in the `${custom:x|serial}`
+variable were not found in the `later_serial` file, which mean they are present in the first session dump but not
+in the second session dump.
+
+### Show only the sessions that were terminated
+
+This is a variation of the previous step, only with filter removing the sessions that are in both files and filtering
+further on one specific source IP:
+
+```
+$ foset -r /tmp/first -p 'merge|file=/tmp/later_serials,1=serial%x'  -o '${default_basic}' \
+  -f 'not custom serial and host 10.109.19.23'
+
+6fdb8d96:   0/11    ICMP           0/0           10.109.19.23:9395     -> 8.8.8.8:8             0
+```
