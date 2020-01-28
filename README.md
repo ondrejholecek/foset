@@ -370,7 +370,10 @@ $ foset -r /tmp/sessions.gz -g -o '${default_basic}' -f 'dhost in 2.22.0.0/16'
 
 ## Further processing
 
-Foset itself does not have any capability for sorting the outputs or creating any aggregated statistics. It is expected that other tools are used for that. 
+Foset CLI tool itself does not have any capability for sorting the outputs or creating any aggregated statistics. It is expected that other tools (usually Linux filters) are used for that. 
+
+*However, there is a [plugin](/plugins/stats/stats.md) to automatically generate predefined summary graphs into a
+standalone web application.*
 
 Like in the following example where we are showing to 10 sessions sorted by download speed from fastest to slowest:
 
