@@ -1,3 +1,0 @@
-- load file with interface and vdom list
-- collect over ssh
-- http mode && json-based output
