@@ -77,7 +77,9 @@ one for destination networks or ports. It is also possible to generate additiona
 between source and destination networks/ports but this is not always meaningful and uses extreme amount of RAM, therefore
 those graphs are disabled by default. To enable generating them, use the parameter `complex`.
 
-## Example
+# Examples
+
+## Aggregating different filters into one output
 
 If you are starting with a new statistics, delete the whole output directory, so the plugin can create and populate it
 correctly from scratch:
@@ -100,3 +102,16 @@ Open the `/tmo/example/index.html` file in your favourite browser.
 
 ![Example HTML - Executions selection](/plugins/stats/README.img/filters.png)
 
+
+## Mapping the VDOMs and interfaces from indexes to real names
+
+The [indexmap plugin](/plugins/indexmap/) can be used together with this stats plugin, but it must be initialized before
+the stats plugin. This is achieved by configuring it first on the command line.
+
+Then the stats plugin must be instructed to use the translated names (from custom variables) instead of the original indexes,
+which is done by specifying either `transvdoms` or `transifaces` parameter, or both:
+
+```
+foset -r ~/tmp/core -p 'indexmap|vdoms=/tmp/vdoms.txt,interfaces=/tmp/interfaces.txt' \
+  -p 'stats|directory=/tmp/example,transvdoms,transifaces'
+```
