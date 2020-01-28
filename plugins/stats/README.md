@@ -16,6 +16,17 @@ The statistics in the output are quite general by design It is expected that the
 (`-f`) that is required. It can be even executed several times with different settings and outputs aggregated in the
 same output directory (see bellow).
 
+## Screenshots
+
+### Starting tab - General overview
+![Example HTML - General overview](/plugins/stats/README.img/general.png)
+
+### TCP and UDP ports tab
+![Example HTML - TCP/UDP ports](/plugins/stats/README.img/ports.png)
+
+### Session coming from and going to different interfaces
+![Example HTML - Interfaces](/plugins/stats/README.img/interfaces.png)
+
 ## Output 
 
 The output is a completely independent HTML document (actually a directory) that can be copied and used even without
@@ -86,3 +97,6 @@ $ ./foset -r ~/tmp/core -p 'stats|directory=/tmp/example' -f 'dport < 1024 and n
 ```
 
 Open the `/tmo/example/index.html` file in your favourite browser.
+
+![Example HTML - Executions selection](/plugins/stats/README.img/filters.png)
+
