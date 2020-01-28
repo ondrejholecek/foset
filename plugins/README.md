@@ -34,9 +34,9 @@ Such plugins are loaded using `-p` option and the name is always the plain plugi
 extension.
 
 Currently recognized (and described plugins):
-- [merge](/plugins/merge/merge.md): allows to merge a text file with additional data about the sessions that is loaded
+- [merge](/plugins/merge/): allows to merge a text file with additional data about the sessions that is loaded
 into specified custom variables
-- [indexmap](/plugins/indexmap/indexmap.md): with provided outputs of some addtional FortiGate commands it translates
+- [indexmap](/plugins/indexmap/): with provided outputs of some addtional FortiGate commands it translates
 the VDOM and interface indexes into their real names
-- [stats](/plugins/stats/stats.md): creates a local webpage with a lot of top-X statistics about the session table in
+- [stats](/plugins/stats/): creates a local webpage with a lot of top-X statistics about the session table in
 the form of beautiful graphs
