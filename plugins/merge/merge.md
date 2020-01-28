@@ -35,7 +35,7 @@ To load data from a file `additional.txt` which contains the column delimited by
 is the session serial number in hexadecimal format (can have optional `0x` prefix), the second column is a text
 string called `department` and the third is positive integer called `floor`:
 
-`-p 'merge|file=additional.txt,1=serial%x,2=department,3=floot%d'`
+`-p 'merge|file=additional.txt,1=serial%x,2=department,3=floor%d'`
 
 The file itself can look like this:
 
