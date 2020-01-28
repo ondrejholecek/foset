@@ -111,3 +111,18 @@ $ foset -r /tmp/sessions.txt -p 'indexmap|interfaces=/tmp/interfaces.txt' \
 172.26.48.39:17711->10.109.3.29:5041     : 55 (Management)
 10.109.250.108:52120->45.75.200.85:53    : 54 (Internet)
 ```
+
+## Using both VDOMs and interfaces mapping at the same time
+
+```
+$ foset -r /tmp/sessions.txt -p 'indexmap|vdoms=/tmp/vdoms.txt,interfaces=/tmp/interfaces.txt' \
+  -o '${sdap:-40s} : ${vdom} (${custom|vdom}) ${iface[oo]} (${custom|iface[oo]})'
+
+172.253.14.1:44137->193.86.26.196:53     : 0 (root) 55 (Management)
+172.253.2.1:43145->193.86.26.196:53      : 0 (root) 55 (Management)
+10.109.248.18:123->5.1.56.123:123        : 0 (root) 54 (Internet)
+10.109.19.162:56983->10.109.3.14:53      : 0 (root) 55 (Management)
+10.109.250.110:32173->208.91.113.70:123  : 0 (root) 54 (Internet)
+193.86.26.197:1884->8.8.4.4:53           : 0 (root) 54 (Internet)
+10.109.248.18:49991->10.109.3.14:53      : 0 (root) 55 (Management)
+```
