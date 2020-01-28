@@ -61,6 +61,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 		if k > max_index  {  max_index = k   }
 	}
 
+	if max_index <= 0 {
+		return nil, fmt.Errorf("column names parameters missing")
+	}
+
 	// prepare column names and types arrays
 	// and save them to globals
 	data_columns  := make([]string, max_index)
