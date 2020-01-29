@@ -39,3 +39,5 @@ Source code for external plugins may not be published anywhere and such plugins 
 binary form. The compatibility with the main Foset binary is not guaranteed between versions, however it should
 be compatible as long as the internal Session structure is not changed. In case of incompatibility, the system
 does not allow to use the incompatible external plugin.
+
+**Note: External plugins only work on Linux and MacOS.**
