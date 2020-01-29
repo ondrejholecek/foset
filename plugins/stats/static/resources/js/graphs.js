@@ -95,10 +95,12 @@ function get_horizontal_graph(ctx, labels, data, formatter, name) {
 var formatters = Object();
 formatters["number"] = function(value, context) {
 	n = parseInt(value);
+	if (isNaN(n)) { return "No data" };
 	return n.toLocaleString();
 }
 formatters["rate"] = function(value, context) {
 	n = parseInt(value)*8;
+	if (isNaN(n)) { return "No data" };
 	if (n < 1000) return n + " bps"
 	if (n < 1000*1000) return (n/1000).toFixed(1) + " kbps"
 	if (n < 1000*1000*1000) return (n/1000/1000).toFixed(1) + " Mbps"
@@ -106,6 +108,7 @@ formatters["rate"] = function(value, context) {
 }
 formatters["size"] = function(value, context) {
 	n = parseInt(value);
+	if (isNaN(n)) { return "No data" };
 	if (n < 1000) return n + " B"
 	if (n < 1000*1000) return (n/1000).toFixed(1) + " kB"
 	if (n < 1000*1000*1000) return (n/1000/1000).toFixed(1) + " MB"

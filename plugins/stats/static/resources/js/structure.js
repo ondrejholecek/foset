@@ -70,7 +70,7 @@ function plotGraphs(showData, showOthers) {
 				}
 
 				// fill with some empty lines if there is not enough data
-				while (g_labels.length < 10) {
+				while (g_labels[0] != "" && g_labels.length < 10) {
 					g_labels.push("");
 				}
 
@@ -96,6 +96,19 @@ function plotGraphs(showData, showOthers) {
 		} catch(err) {
 			console.error("Error when processing \"" + data + "\" graph: ", err);
 		}
+	}
+
+	// clear graphs we have no data for in the current dataset
+	for (existing of Object.keys(existing_graphs)) {
+		if (showData["order"].includes(existing)) { continue }
+
+		var block = $("div #" + existing);
+//		block.find("p.description").text("");
+//		block.find("h2").text("");
+		block.find("p.summary").text("");
+		existing_graphs[existing].data.labels = [""];
+		existing_graphs[existing].data.datasets[0].data = [""];
+		existing_graphs[existing].update();
 	}
 }
 
