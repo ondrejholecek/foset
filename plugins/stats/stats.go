@@ -282,8 +282,12 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 	dstnet := getNetwork(dst_ip, dstmask)
 
 	snatip := getNetwork(nat_ip, 0xffffffff)
-	snat_ip.AddOne(snatip)
-	snat_port.AddOne(nat_port)
+	if snatip != 0 {
+		snat_ip.AddOne(snatip)
+	}
+	if nat_port != 0 {
+		snat_port.AddOne(nat_port)
+	}
 
 	protocols.AddOne(session.Basics.Protocol)
 
@@ -351,7 +355,9 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 		srcdstnetworks_errs.Add(srcdstnet, session.Stats.Errors_org + session.Stats.Errors_rev)
 
 		snatipport := uint64(snatip) << 32 | uint64(nat_port)
-		snat_ipport.AddOne(snatipport)
+		if snatipport != 0 {
+			snat_ipport.AddOne(snatipport)
+		}
 
 		nexthop_orgrev.AddOne(fmt.Sprintf("%s -> %s", session.Interfaces.NextHop_org, session.Interfaces.NextHop_rev))
 	}
@@ -1123,7 +1129,7 @@ func ProcessFinished() {
 	params["title"] = "IP used as source NAT"
 	params["description"] = "IP address that FortiGate selected as the source address when applying source NAT."
 	params["showOthers"] = true
-	params["showSummary"] = false
+	params["showSummary"] = true
 	params["transform"] = func(s interface{})(string) {
 		if s.(uint32) == 0 { return "No source NAT"
 		} else { return transform_ip(s) }
@@ -1135,7 +1141,7 @@ func ProcessFinished() {
 	params["title"] = "Port used as source NAT"
 	params["description"] = "Port number that FortiGate selected as the source address when applying source NAT."
 	params["showOthers"] = true
-	params["showSummary"] = false
+	params["showSummary"] = true
 	params["transform"] = func(s interface{})(string) {
 		port := s.(uint16)
 		if port == 0 { return "No source NAT"
@@ -1149,7 +1155,7 @@ func ProcessFinished() {
 		params["title"] = "IP/port combination used as source NAT"
 		params["description"] = "IP address and port number that FortiGate selected as the source address when applying source NAT."
 		params["showOthers"] = true
-		params["showSummary"] = false
+		params["showSummary"] = true
 		params["transform"] = func(s interface{})(string) {
 			port := s.(uint64)
 			if port == 0 { return "No source NAT"
