@@ -63,7 +63,7 @@ var shapers_org, shapers_rev, shapers_perip *Counter
 var tunnels_in, tunnels_out *Counter
 var interfaces_org_in, interfaces_org_out, interfaces_rev_in, interfaces_rev_out *Counter
 var interfaces_org_inout, interfaces_rev_inout *Counter
-var nexthop_org, nexthop_rev *Counter
+var nexthop_org, nexthop_rev, nexthop_orgrev *Counter
 
 var offload_npu, offload_nturbo *Counter
 var offload_fail, offload_fail_org, offload_fail_rev *Counter
@@ -203,6 +203,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	srcdstnetworks_errs   = CounterInit("srcdst_net_errs", WriteSimpleData)
 	nexthop_org           = CounterInit("nexthop_org", WriteSimpleData)
 	nexthop_rev           = CounterInit("nexthop_rev", WriteSimpleData)
+	nexthop_orgrev        = CounterInit("nexthop_orgrev", WriteSimpleData)
 	durations             = CounterInit("duration", WriteSimpleData)
 	ttls                  = CounterInit("ttl", WriteSimpleData)
 	helpers               = CounterInit("helper", WriteSimpleData)
@@ -351,6 +352,8 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 
 		snatipport := uint64(snatip) << 32 | uint64(nat_port)
 		snat_ipport.AddOne(snatipport)
+
+		nexthop_orgrev.AddOne(fmt.Sprintf("%s -> %s", session.Interfaces.NextHop_org, session.Interfaces.NextHop_rev))
 	}
 
 	switch duration := session.Basics.Duration; {
@@ -984,6 +987,14 @@ func ProcessFinished() {
 	params["description"] = "IP address of the next hop in the reverse session direction. This should reversely match the routing table."
 	params["showSummary"] = false
 	nexthop_rev.WriteData(f, params)
+
+	if use_complex_matching {
+		params["title"] = "Communicating next hops"
+		params["description"] = "IP address of the next hops in the forward and reverse session direction."
+		params["transform"] = transform_text
+		params["showSummary"] = false
+		nexthop_orgrev.WriteData(f, params)
+	}
 
 	// Durations & timeouts
 	params["tab"] = "times"
