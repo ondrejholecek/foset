@@ -21,10 +21,7 @@ import (
 
 // parameters saved from InitPlugin
 var log loggo.Logger
-var plugin_filename string
-var plugin_filter   string
-var plugin_version  string
-var plugin_commit   string
+var plugin *plugin_common.FosetPlugin
 var config          string
 
 // plugin parameters
@@ -77,10 +74,14 @@ var count_total    uint64  // all sessions
 var count_matched  uint64  // session matching filter
 
 //
-func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
+func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (error) {
 	// setup logging with custom name (to differentiate from other plugins)
 	log = custom_log.Child("stats")
 
+	// save plugin info
+	plugin = pluginInfo
+
+	//
 	translate_vdoms = true
 	translate_interfaces = true
 
@@ -94,7 +95,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	unknowns := make([]string, 0)
 	for k, _ := range du { unknowns = append(unknowns, k) }
 	if len(unknowns) > 0 {
-		return nil, fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
+		return fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
 	}
 
 	// translations
@@ -107,7 +108,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	// save the path to the results directory
 	directory, exists = dk["directory"]
 	if !exists {
-		return nil, fmt.Errorf("parameter \"directory\" is mandatory")
+		return fmt.Errorf("parameter \"directory\" is mandatory")
 	}
 
 	// if the directory does not exist, we create it (_override = true)
@@ -117,7 +118,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	if dstat == nil {
 		directory_override = true
 	} else if !dstat.IsDir() {
-		return nil, fmt.Errorf("directory path \"%s\" is not a directory", directory)
+		return fmt.Errorf("directory path \"%s\" is not a directory", directory)
 	}
 
 	// however, it the "force" parameter was specified, override it it anyway
@@ -131,14 +132,14 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	var tmp uint64
 
 	tmp, err = strconv.ParseUint(dk["srcprefix"], 10, 32)
-	if err != nil { return nil, fmt.Errorf("parameter srcprefix unparsable: %s", err) }
-	if tmp == 0 || tmp > 32 { return nil, fmt.Errorf("nonsence srcprefix length %d", tmp) }
+	if err != nil { return fmt.Errorf("parameter srcprefix unparsable: %s", err) }
+	if tmp == 0 || tmp > 32 { return fmt.Errorf("nonsence srcprefix length %d", tmp) }
 	srcprefix = uint32(tmp)
 	srcmask   = uint32(math.Pow(float64(2), float64(srcprefix))-1) << (32-srcprefix)
 
 	tmp, err = strconv.ParseUint(dk["dstprefix"], 10, 32)
-	if err != nil { return nil, fmt.Errorf("parameter dstprefix unparsable: %s", err) }
-	if tmp == 0 || tmp > 32 { return nil, fmt.Errorf("nonsence dstprefix length %d", tmp) }
+	if err != nil { return fmt.Errorf("parameter dstprefix unparsable: %s", err) }
+	if tmp == 0 || tmp > 32 { return fmt.Errorf("nonsence dstprefix length %d", tmp) }
 	dstprefix = uint32(tmp)
 	dstmask   = uint32(math.Pow(float64(2), float64(dstprefix))-1) << (32-dstprefix)
 
@@ -168,12 +169,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 
 	// setup callbacks
 	var hooks plugin_common.Hooks
-	hooks.Start        = Start
 	hooks.BeforeFilter = ProcessBeforeFilter
 	hooks.AfterFilter  = ProcessAfterFilter
 	hooks.Finished     = ProcessFinished
 
-	var pluginInfo plugin_common.FosetPlugin
 	pluginInfo.Hooks = hooks
 
 	// initialize counters
@@ -240,14 +239,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	initDictUDPState();
 
 	//
-	return &pluginInfo, nil
-}
-
-func Start(pi *plugin_common.FosetPlugin) {
-	plugin_filename = path.Base(pi.Filename)
-	plugin_filter   = pi.Filter
-	plugin_version  = pi.Version
-	plugin_commit   = pi.Commit
+	return nil
 }
 
 func ProcessBeforeFilter(session *fortisession.Session) bool {
@@ -477,10 +469,10 @@ func ProcessFinished() {
 	// and save all data to it. At the end we save it to the `foset` object using unique name.
 	fmt.Fprintf(f, "var current = Object()\n")
 	fmt.Fprintf(f, "current.info = Object()\n")
-	fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", plugin_filename)
-	fmt.Fprintf(f, "current.info.filter           = \"%s\"\n", plugin_filter)
-	fmt.Fprintf(f, "current.info.version          = \"%s\"\n", plugin_version)
-	fmt.Fprintf(f, "current.info.commit           = \"%s\"\n", plugin_commit)
+	fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", path.Base(plugin.Filename))
+	fmt.Fprintf(f, "current.info.filter           = \"%s\"\n", plugin.Filter)
+	fmt.Fprintf(f, "current.info.version          = \"%s\"\n", plugin.Version)
+	fmt.Fprintf(f, "current.info.commit           = \"%s\"\n", plugin.Commit)
 	fmt.Fprintf(f, "current.info.plugin_config    = \"%s\"\n", config)
 	fmt.Fprintf(f, "current.info.calculated       = %d\n", time.Now().Unix())
 	fmt.Fprintf(f, "current.info.sessions_total   = %d\n", count_total)

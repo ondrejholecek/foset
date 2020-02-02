@@ -15,6 +15,7 @@ import (
 	"foset/fortisession"
 	"foset/fortisession/fortiformatter"
 	"foset/fortisession/forticonditioner"
+	"foset/iproviders"
 	"github.com/pkg/profile"
 )
 
@@ -22,6 +23,7 @@ var mainVersion string
 var fosetGitCommit          string
 
 var log = loggo.GetLogger("foset")
+var inputs *iproviders.IProviders
 
 func main() {
 	// read arguments
@@ -36,6 +38,7 @@ func main() {
 	cache_read := parser.Flag(  "c", "cache",    &argparse.Options{Default: false,            Help: "Load session data from cached file [EXPERIMENTAL]"})
 	plugin_ext := parser.List(  "P", "external-plugin", &argparse.Options{                    Help: "Load external plugin library"})
 	plugin_int := parser.List(  "p", "internal-plugin", &argparse.Options{                    Help: "Load internal plugin"})
+	ipparams   := parser.List(  "i", "input-provider",  &argparse.Options{                    Help: "Parameters for input providers"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
@@ -86,6 +89,9 @@ func main() {
 	fortiformatter.InitLog(log.Child("formatter"))
 	fortisession.InitLog(log.Child("session"))
 
+	// input providers
+	inputs = iproviders.Init(*ipparams, log.Child("iproviders"))
+
 	//
 	data_request := fortisession.SessionDataRequest {}
 
@@ -95,37 +101,39 @@ func main() {
 	// plugins - external
 	for _, p := range *plugin_ext {
 		log.Debugf("Loading external plugin \"%s\"", p)
-		pinfo, err := load_external_plugin(p, &data_request)
+		pinfo := plugin_common.FosetPlugin{
+			Filename : *filename,
+			Filter   : *filter,
+			Version  : mainVersion,
+			Commit   : fosetGitCommit,
+			Inputs   : inputs,
+		}
+		err := load_external_plugin(p, &data_request, &pinfo)
 		if err != nil {
 			log.Criticalf("Cannot load external plugin: %s", err)
 			os.Exit(100)
 		}
-		plugins = append(plugins, pinfo)
+		plugins = append(plugins, &pinfo)
 		log.Debugf("Done")
 	}
 
 	// plugins - internal
 	for _, p := range *plugin_int {
 		log.Debugf("Loading internal plugin \"%s\"", p)
-		pinfo, err := load_internal_plugin(p, &data_request)
+		pinfo := plugin_common.FosetPlugin{
+			Filename : *filename,
+			Filter   : *filter,
+			Version  : mainVersion,
+			Commit   : fosetGitCommit,
+			Inputs   : inputs,
+		}
+		err := load_internal_plugin(p, &data_request, &pinfo)
 		if err != nil {
 			log.Criticalf("Cannot load internal plugin: %s", err)
 			os.Exit(100)
 		}
-		plugins = append(plugins, pinfo)
+		plugins = append(plugins, &pinfo)
 		log.Debugf("Done")
-	}
-
-	// fill internal data for use by plugins
-	// and "Start" it
-	for _, plugin := range plugins {
-		plugin.Filename = *filename
-		plugin.Filter   = *filter
-		plugin.Version  = mainVersion
-		plugin.Commit   = fosetGitCommit
-		if plugin.Hooks.Start != nil {
-			plugin.Hooks.Start(plugin)
-		}
 	}
 
 	//

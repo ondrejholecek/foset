@@ -29,33 +29,32 @@ const (
 // ************************
 // *** external plugins ***
 // ************************
-func load_external_plugin(s string, data_request *fortisession.SessionDataRequest) (*plugin_common.FosetPlugin, error) {
+func load_external_plugin(s string, data_request *fortisession.SessionDataRequest, pluginInfo *plugin_common.FosetPlugin) (error) {
 	var err error
 
 	pluginspec, data := split_plugin_name_data(s)
 
 	// plugin file
 	filename, err := search_plugin(pluginspec)
-	if err != nil { return nil, fmt.Errorf("cannot local plugin file: %s", err) }
+	if err != nil { fmt.Errorf("cannot local plugin file: %s", err) }
 
 	p, err := plugin.Open(filename)
-	if err != nil { return nil, fmt.Errorf("cannot load plugin file: %s", err) }
+	if err != nil { fmt.Errorf("cannot load plugin file: %s", err) }
 
 	pf, err := p.Lookup("InitPlugin")
-	if err != nil { return nil, fmt.Errorf("cannot find \"InitPlugin\" function in plugin: %s", err) }
+	if err != nil { fmt.Errorf("cannot find \"InitPlugin\" function in plugin: %s", err) }
 
-	pfinit, ok := pf.(func(string, *fortisession.SessionDataRequest, loggo.Logger)(*plugin_common.FosetPlugin, error))
-	if !ok { return nil, fmt.Errorf("cannot verify type of \"InitPlugin\" function") }
+	pfinit, ok := pf.(func(*plugin_common.FosetPlugin, string, *fortisession.SessionDataRequest, loggo.Logger)(error))
+	if !ok { fmt.Errorf("cannot verify type of \"InitPlugin\" function") }
 
 	// init returns functions of the plugin
-	var pluginInfo *plugin_common.FosetPlugin
-	pluginInfo, err = pfinit(data, data_request, log.Child("eplugin"))
+	err = pfinit(pluginInfo, data, data_request, log.Child("eplugin"))
 	if err != nil {
-		return nil, fmt.Errorf("cannot initialize external plugin: %s", err)
+		return fmt.Errorf("cannot initialize external plugin: %s", err)
 	}
 
 	//
-	return pluginInfo, nil
+	return nil
 }
 
 func search_plugin(s string) (string, error) {
@@ -83,30 +82,28 @@ func search_plugin(s string) (string, error) {
 // *** internal plugins ***
 // ************************
 
-func load_internal_plugin(s string, data_request *fortisession.SessionDataRequest) (*plugin_common.FosetPlugin, error) {
+func load_internal_plugin(s string, data_request *fortisession.SessionDataRequest, pluginInfo *plugin_common.FosetPlugin) (error) {
 	var err error
 	pluginspec, data := split_plugin_name_data(s)
 
 	// run init and get plugin info
-	var pluginInfo *plugin_common.FosetPlugin
-
 	if pluginspec == "merge" {
-		pluginInfo, err = plugin_merge.InitPlugin(data, data_request, log.Child("iplugin"))
+		err = plugin_merge.InitPlugin(pluginInfo, data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "stats" {
-		pluginInfo, err = plugin_stats.InitPlugin(data, data_request, log.Child("iplugin"))
+		err = plugin_stats.InitPlugin(pluginInfo, data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "indexmap" {
-		pluginInfo, err = plugin_indexmap.InitPlugin(data, data_request, log.Child("iplugin"))
+		err = plugin_indexmap.InitPlugin(pluginInfo, data, data_request, log.Child("iplugin"))
 	} else if pluginspec == "example" {
-		pluginInfo, err = plugin_example.InitPlugin(data, data_request, log.Child("iplugin"))
+		 err = plugin_example.InitPlugin(pluginInfo, data, data_request, log.Child("iplugin"))
 	} else {
-		return nil, fmt.Errorf("unknown internal plugin: %s", pluginspec)
+		return fmt.Errorf("unknown internal plugin: %s", pluginspec)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("cannot initialize internal plugin: %s", err)
+		return fmt.Errorf("cannot initialize internal plugin: %s", err)
 	}
 
-	return pluginInfo, nil
+	return nil
 }
 
 // ********************************

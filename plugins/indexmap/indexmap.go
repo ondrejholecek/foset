@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"bufio"
 	"strings"
-	"os"
 	"regexp"
 	"foset/fortisession"
 	"foset/fortisession/multivalue"
@@ -29,14 +28,19 @@ import (
 // parameters saved from InitPlugin
 var log loggo.Logger
 
+var plugin *plugin_common.FosetPlugin
+
 // dictionaries
 var dict_vdoms       map[uint32]string
 var dict_interfaces  map[uint32]string
 
 //
-func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
+func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (error) {
 	// setup logging with custom name (to differentiate from other plugins)
 	log = custom_log.Child("indexmap")
+
+	// save our plugin info
+	plugin = pluginInfo
 
 	// parse data parameters
 	defaults := make(map[string]string)
@@ -46,14 +50,14 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	unknowns := make([]string, 0)
 	for k, _ := range du { unknowns = append(unknowns, k) }
 	if len(unknowns) > 0 {
-		return nil, fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
+		return fmt.Errorf("following parameters are not recognized: %s", strings.Join(unknowns, ", "))
 	}
 
 	// what to do?
 	vdoms, _ := dk["vdoms"]
 	if vdoms != "" {
 		err := parseVdoms(vdoms)
-		if err != nil { return nil, fmt.Errorf("cannot parse vdoms file: %s", err) }
+		if err != nil { return fmt.Errorf("cannot parse vdoms file: %s", err) }
 		data_request.Policy = true
 		data_request.Custom = true
 	}
@@ -61,7 +65,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	interfaces, _ := dk["interfaces"]
 	if interfaces != "" {
 		err := parseInterfaces(interfaces)
-		if err != nil { return nil, fmt.Errorf("cannot parse interfaces file: %s", err) }
+		if err != nil { return fmt.Errorf("cannot parse interfaces file: %s", err) }
 		data_request.Interfaces = true
 		data_request.Custom = true
 	}
@@ -70,11 +74,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	var hooks plugin_common.Hooks
 	hooks.BeforeFilter = ProcessBeforeFilter
 
-	var pluginInfo plugin_common.FosetPlugin
 	pluginInfo.Hooks = hooks
 
 	//
-	return &pluginInfo, nil
+	return nil
 }
 
 func ProcessBeforeFilter(session *fortisession.Session) bool {
@@ -134,7 +137,7 @@ func ProcessBeforeFilter(session *fortisession.Session) bool {
 
 // parsing functions
 func parseVdoms(filename string) error {
-	f, err := os.Open(filename)
+	f, err := plugin.Inputs.Provide(filename)
 	if err != nil { return err }
 
 	re := regexp.MustCompile("^name=([^/]+).*?\\sindex=([0-9]+)")
@@ -170,7 +173,7 @@ func parseVdoms(filename string) error {
 }
 
 func parseInterfaces(filename string) error {
-	f, err := os.Open(filename)
+	f, err := plugin.Inputs.Provide(filename)
 	if err != nil { return err }
 
 	// if=mgmt1 family=00 type=1 index=3 mtu=1500 link=0 master=0

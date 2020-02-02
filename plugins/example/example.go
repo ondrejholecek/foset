@@ -69,7 +69,7 @@ var networks_after_filter   map[uint32]uint64
 // Callback not configured should be kept at `nil`.
 //
 // Possible error. When not `nil` it will be reported to user and `foset` will terminate.
-func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
+func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (error) {
 	// setup logging with custom name (to differentiate from other plugins)
 	log = custom_log.Child("example")
 
@@ -80,12 +80,12 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 
 	// validate parameters
 	if len(du) > 0 || len(dui) > 0 {
-		return nil, fmt.Errorf("some unknown parameters received")
+		return fmt.Errorf("some unknown parameters received")
 	}
 
 	// prefix length
 	prefixlen, err := strconv.ParseUint(dk["prefixlen"], 10, 32)
-	if err != nil { return nil, fmt.Errorf("parameter prefixlen unparsable: %s", err) }
+	if err != nil { return fmt.Errorf("parameter prefixlen unparsable: %s", err) }
 	global_prefixlen = uint32(prefixlen)
 
 	// calculate the mask
@@ -104,7 +104,6 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	hooks.AfterFilter  = ProcessAfterFilter
 	hooks.Finished     = ProcessFinished
 
-	var pluginInfo plugin_common.FosetPlugin
 	pluginInfo.Hooks = hooks
 
 	// initialize globals
@@ -112,7 +111,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	networks_after_filter  = make(map[uint32]uint64)
 
 	//
-	return &pluginInfo, nil
+	return nil
 }
 
 // ProcessBeforeFilter is called immediatelly after the `Session` is parsed.

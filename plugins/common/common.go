@@ -7,6 +7,7 @@ import (
 	"strings"
 	"strconv"
 	"foset/fortisession"
+	"foset/iproviders"
 )
 
 // Hooks specify the plugin callbacks.
@@ -15,7 +16,6 @@ import (
 // Their return boolean specifies
 // whether `foset` should ignore the session (true = to not display it) or no (false).
 type Hooks struct {
-	Start            func(*FosetPlugin)
 	BeforeFilter     func(*fortisession.Session)(bool)
 	AfterFilter      func(*fortisession.Session)(bool)
 	Finished         func()
@@ -30,6 +30,8 @@ type FosetPlugin struct {
 	Commit    string
 	Filename  string
 	Filter    string
+
+	Inputs    *iproviders.IProviders
 }
 
 // ExtractData takes a plugin data string (everything after first "|" i plugin

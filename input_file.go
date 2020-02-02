@@ -4,7 +4,6 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"io"
 	"bufio"
@@ -124,15 +123,11 @@ func Init_file_processing(results chan *fortisession.Session, req *fortisession.
 func (state *FileProcessing) Read_all_from_file(filename string, compression Compression) (error) {
 	// where to read the data from 
 	var reader io.Reader
-	if filename == "-" {
-		reader = os.Stdin
-	} else {
-		tmp, err := os.Open(filename)
-		if err != nil {
-			return fmt.Errorf("Cannot read session data: %s", err)
-		}
-		reader = tmp
-	}
+	var err    error
+
+	// use input provider
+	reader, err = inputs.Provide(filename)
+	if err != nil { return fmt.Errorf("cannot read session data: %s", err) }
 
 	// is the input somehow compressed?
 	if compression.Gzip {

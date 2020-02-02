@@ -16,6 +16,7 @@ import (
 )
 
 var log loggo.Logger
+var plugin *plugin_common.FosetPlugin
 
 var global_data_fields   map[uint64][]*multivalue.MultiValue
 var global_data_columns  []string
@@ -30,9 +31,12 @@ const (
 	CT_FLOAT64       ColumnType = iota
 )
 
-func InitPlugin(data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (*plugin_common.FosetPlugin, error) {
+func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (error) {
 	// setup logging
 	log = custom_log.Child("merge")
+
+	//
+	plugin = pluginInfo
 
 	// parse data parameters
 	defaults := make(map[string]string)
@@ -44,15 +48,15 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 
 	// make sure all parameters are correct
 	if len(dk["file"]) == 0 {
-		return nil, fmt.Errorf("file parameter missing")
+		return fmt.Errorf("file parameter missing")
 	}
 	if len(du) > 0 {
 		parameter_names := make([]string, 0)
 		for k, _ := range du { parameter_names = append(parameter_names, k) }
-		return nil, fmt.Errorf("unknown parameter(s): %s", strings.Join(parameter_names, ", "))
+		return fmt.Errorf("unknown parameter(s): %s", strings.Join(parameter_names, ", "))
 	}
 	if _, has_index_0 := dui[0]; has_index_0 {
-		return nil, fmt.Errorf("fields position numbering should start from 1")
+		return fmt.Errorf("fields position numbering should start from 1")
 	}
 
 	// find the highest column index
@@ -62,7 +66,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	}
 
 	if max_index <= 0 {
-		return nil, fmt.Errorf("column names parameters missing")
+		return fmt.Errorf("column names parameters missing")
 	}
 
 	// prepare column names and types arrays
@@ -102,7 +106,7 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 				data_defaults[i-1] = multivalue.NewFloat64(0)
 
 			} else {
-				return nil, fmt.Errorf("unknown field type \"%s\" for field \"%s\"", tt, value)
+				return fmt.Errorf("unknown field type \"%s\" for field \"%s\"", tt, value)
 			}
 		}
 
@@ -118,12 +122,12 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 
 	// make sure we have key column
 	if key_index == -1 {
-		return nil, fmt.Errorf("key field name \"%s\" not present in fields", dk["key"])
+		return fmt.Errorf("key field name \"%s\" not present in fields", dk["key"])
 	}
 
 	// load the data from file and save it to global variable
 	data_fields, err := load_file(dk["file"], dk["sep"], key_index)
-	if err != nil { return nil, err }
+	if err != nil { return err }
 	global_data_fields = data_fields
 
 	// request fields
@@ -134,11 +138,10 @@ func InitPlugin(data string, data_request *fortisession.SessionDataRequest, cust
 	var hooks plugin_common.Hooks
 	hooks.BeforeFilter = ProcessSession
 
-	var pluginInfo plugin_common.FosetPlugin
 	pluginInfo.Hooks = hooks
 
 	//
-	return &pluginInfo, nil
+	return nil
 }
 
 func ProcessSession(session *fortisession.Session) bool {
@@ -157,7 +160,7 @@ func ProcessSession(session *fortisession.Session) bool {
 
 
 func load_file(filename string, sep string, key_index int) (map[uint64][]*multivalue.MultiValue, error) {
-	f, err := os.Open(filename)
+	f, err := plugin.Inputs.Provide(filename)
 	if err != nil { return nil, err }
 
 	data := make(map[uint64][]*multivalue.MultiValue)
