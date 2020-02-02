@@ -28,6 +28,10 @@ func (ip IProviderFile) Name() (string) {
 	return ip.name
 }
 
+func (ip IProviderFile) WaitReady() (error) {
+	return nil
+}
+
 func (ip IProviderFile) CanProvide(name string) (bool, int) {
 	if name == "" { return false, 0 }
 	if name[0] == '/' { return true, 1000 }

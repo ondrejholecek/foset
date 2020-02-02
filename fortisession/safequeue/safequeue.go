@@ -7,7 +7,10 @@ import (
 	"container/list"
 	"sync"
 	"time"
+	"github.com/juju/loggo"
 )
+
+var log loggo.Logger
 
 type SafeQueue struct {
 	plains *list.List
@@ -15,7 +18,9 @@ type SafeQueue struct {
 	active bool
 }
 
-func Init() (*SafeQueue) {
+func Init(custom_log loggo.Logger) (*SafeQueue) {
+	log = custom_log
+
 	var p SafeQueue
 	p.plains = list.New()
 	p.lock = &sync.Mutex{}
@@ -66,6 +71,7 @@ func (p *SafeQueue) IsEmpty() bool {
 func (p *SafeQueue) Finish() {
 	// Need first to wait for the queue to become empty and then deactivate processors
 	// .. if we deactivate it first, it may never become empty..
+
 	for !p.IsEmpty() {
 		time.Sleep(10 * time.Millisecond)
 	}

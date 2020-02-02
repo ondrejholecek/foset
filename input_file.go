@@ -18,15 +18,12 @@ import (
 	"foset/fortisession/forticonditioner"
 )
 
-// global processing struct to allow many gorutines to work at the same time
-var global_safequeue *safequeue.SafeQueue = safequeue.Init()
-
 //
-func process_sessions(results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool, total_count *uint64, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) {
+func process_sessions(sq *safequeue.SafeQueue, results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool, total_count *uint64, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) {
 
-	for global_safequeue.IsActive() {
+	for sq.IsActive() {
 		count := 0
-		for _, plain := range global_safequeue.Pop(128) {
+		for _, plain := range sq.Pop(128) {
 			session := fortisession.Parse(plain, req)
 
 			atomic.AddUint64(total_count, 1)
@@ -104,20 +101,24 @@ type Compression struct {
 type FileProcessing struct {
 	threads int
 	done    chan bool
+	sq      *safequeue.SafeQueue
 }
 
 func Init_file_processing(results chan *fortisession.Session, req *fortisession.SessionDataRequest, threads int, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) (*FileProcessing) {
 	done := make(chan bool, threads)
 	var count uint64
 
-	for i := 0; i < threads; i++ {
-		go process_sessions(results, req, done, &count, conditioner, plugins)
-	}
-
-	return &FileProcessing {
+	fp := FileProcessing {
 		threads: threads,
 		done   : done,
+		sq     : safequeue.Init(log.Child("safequeue")),
 	}
+
+	for i := 0; i < threads; i++ {
+		go process_sessions(fp.sq, results, req, done, &count, conditioner, plugins)
+	}
+
+	return &fp
 }
 
 func (state *FileProcessing) Read_all_from_file(filename string, compression Compression) (error) {
@@ -160,14 +161,14 @@ func (state *FileProcessing) Read_all_from_file(filename string, compression Com
 		log.Tracef("Read session:\n%s\n---end---\n", session)
 		buf.PushBack(session)
 		if buf.Len() >= 1024 {
-			global_safequeue.Push(buf)
+			state.sq.Push(buf)
 			buf = list.New()
 		}
 	}
-	if buf.Len() > 0 { global_safequeue.Push(buf) }
+	if buf.Len() > 0 { state.sq.Push(buf) }
 
 	// Finish will wait for queue to get empty and them will deactivate it
-	global_safequeue.Finish()
+	state.sq.Finish()
 	// and wait for all the workers to finish
 	for i := 0; i < state.threads; i++ {
 		<-state.done

@@ -7,9 +7,9 @@ import (
 	"github.com/akamensky/argparse"
 	"github.com/juju/loggo"
 	"strings"
-	"bufio"
 	"os"
 	"fmt"
+	"time"
 	"runtime"
 	"foset/plugins/common"
 	"foset/fortisession"
@@ -29,7 +29,7 @@ func main() {
 	// read arguments
 	parser := argparse.NewParser("foset", "Parses the FortiOS session list. Written by Ondrej Holecek <oholecek@fortinet.com>.")
 	version    := parser.Flag(  "v", "version",  &argparse.Options{Default: false,            Help: "Print current version"})
-	filename   := parser.String("r", "file",     &argparse.Options{Default: "",               Help: "File containing the session list, use \"-\" for stdin"})
+	sessionfile:= parser.String("r", "file",     &argparse.Options{Default: "",               Help: "File containing the session list, use \"-\" for stdin"})
 	output     := parser.String("o", "output",   &argparse.Options{Default: "${default_basic}", Help: "Format of the output"})
 	filter     := parser.String("f", "filter",   &argparse.Options{Default: "",               Help: "Show only sessions matching filter"})
 	debug      := parser.Flag(  "d", "debug",    &argparse.Options{Default: false,            Help: "Print also debugging outputs"})
@@ -40,6 +40,8 @@ func main() {
 	plugin_int := parser.List(  "p", "internal-plugin", &argparse.Options{                    Help: "Load internal plugin"})
 	ipparams   := parser.List(  "i", "input-provider",  &argparse.Options{                    Help: "Parameters for input providers"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
+	loop       := parser.Int(   "l", "loop",     &argparse.Options{Default: 1,                Help: "Number of cycles to run, zero for infinite loop"})
+	loop_time  := parser.Int(   "",  "loop-time",&argparse.Options{Default: 1,                Help: "How often to run in cycle (seconds, including the execution time)"})
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
 	parse_all  := parser.Flag(  "", "parse-all", &argparse.Options{Default: false,            Help: "Debugging: parse all fields regardless on filter and output"})
@@ -63,7 +65,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *filename == "" {
+	if *sessionfile == "" {
 		fmt.Println("File parameter required\nUse -h for help")
 		os.Exit(1)
 	}
@@ -102,7 +104,7 @@ func main() {
 	for _, p := range *plugin_ext {
 		log.Debugf("Loading external plugin \"%s\"", p)
 		pinfo := plugin_common.FosetPlugin{
-			Filename : *filename,
+			Filename : *sessionfile,
 			Filter   : *filter,
 			Version  : mainVersion,
 			Commit   : fosetGitCommit,
@@ -121,7 +123,7 @@ func main() {
 	for _, p := range *plugin_int {
 		log.Debugf("Loading internal plugin \"%s\"", p)
 		pinfo := plugin_common.FosetPlugin{
-			Filename : *filename,
+			Filename : *sessionfile,
 			Filter   : *filter,
 			Version  : mainVersion,
 			Commit   : fosetGitCommit,
@@ -165,71 +167,42 @@ func main() {
 		log.Debugf("No filter specified")
 	}
 
-	parsed_sessions        := make(chan *fortisession.Session, 250*(*threads))
-	all_sessions_collected := make(chan bool)
-
-	var session_cache *CacheFile
-	var inerr error
-
-	if *cache_save {
-		session_cache, inerr = CacheInit(*filename + ".cache", "w", *threads)
-		data_request.Plain = false
-		go save_sessions(parsed_sessions, session_cache, conditioner, plugins, all_sessions_collected)
-		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads, conditioner, plugins)
-		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
-
-	} else if *cache_read {
-		session_cache, inerr = CacheInit(*filename + ".cache", "r", *threads)
-		go collect_sessions(parsed_sessions, formatter, conditioner, plugins, all_sessions_collected, !(*nobuffer))
-		inerr = session_cache.ReadAll(parsed_sessions)
-
-	} else {
-		go collect_sessions(parsed_sessions, formatter, conditioner, plugins, all_sessions_collected, !(*nobuffer))
-		file_processing := Init_file_processing(parsed_sessions, &data_request, *threads, conditioner, plugins)
-		inerr = file_processing.Read_all_from_file(*filename, Compression { Gzip : *gzip_in })
-	}
-
-	if inerr != nil {
-		log.Criticalf("Input data read error: %s", inerr)
-		os.Exit(100)
-	}
-
-	close(parsed_sessions)
-	<-all_sessions_collected // wait for all sessions to be collected in gorutine before exiting main program
-	if session_cache != nil { session_cache.Finalize() }
-}
-
-
-func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool) {
-	for session := range results {
-		if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
-		if conditioner != nil && !conditioner.Matches(session) { continue }
-		if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
-		cache.Write(session)
-	}
-	run_plugins(plugins, PLUGINS_FINISHED, nil)
-	done <- true
-}
-
-func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool, buffer bool) {
-	// prepare the buffer (even if it is not going to be used)
-	w := bufio.NewWriterSize(os.Stdout, 1024)
-	// is output terminal?
-	fi, _ := os.Stdout.Stat();
-	terminal := !(fi.Mode() & os.ModeCharDevice == 0)
-
 	//
-	for session := range results {
-		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
+	ep := ExecuteParams {
+		threads        : *threads,
+		sessionfile    : *sessionfile,
+		nobuffer       : *nobuffer,
+		gzip_in        : *gzip_in,
+		cache_save     : *cache_save,
+		cache_read     : *cache_read,
+		data_request   : &data_request,
+		conditioner    : conditioner,
+		formatter      : formatter,
+		plugins        : plugins,
+	}
 
-		if buffer && !terminal {
-			w.WriteString(formatter.Format(session) + "\n")
+
+	for i := 0; i < *loop || *loop == 0; i++ {
+		log.Debugf("Starting next cycle")
+		start := time.Now()
+
+		err := inputs.WaitReady()
+		if err != nil {
+			log.Criticalf("Input providers are not ready: %s", err)
+			break
+		}
+
+		execute(ep)
+		runtime.GC()
+
+		took  := time.Now().Sub(start)
+		sleep := time.Duration(*loop_time) * time.Duration(time.Second) - took
+		if sleep.Seconds() > 0 {
+			log.Debugf("Last cycle took %.1f seconds, will sleep for %.1f seconds", took.Seconds(), sleep.Seconds())
+			time.Sleep(sleep)
 		} else {
-			fmt.Println(formatter.Format(session))
+			log.Debugf("Last cycle took %.1f seconds, repeating immediately", took.Seconds())
 		}
 	}
-
-	w.Flush()
-	run_plugins(plugins, PLUGINS_FINISHED, nil)
-	done <- true
 }
+

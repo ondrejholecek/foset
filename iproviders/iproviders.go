@@ -71,3 +71,12 @@ func (ips *IProviders) Provide(name string) (io.Reader, error) {
 
 	return resource, nil
 }
+
+func (ips *IProviders) WaitReady() (error) {
+	for _, ip := range ips.iproviders {
+		err := ip.WaitReady()
+		if err != nil { return err }
+	}
+
+	return nil
+}
