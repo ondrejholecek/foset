@@ -14,4 +14,7 @@ $ go get github.com/akamensky/argparse
 $ go get github.com/hprose/hprose-golang/io
 $ go get github.com/juju/loggo
 $ go get github.com/pkg/profile
+$ go get golang.org/x/crypto/ssh
+$ go get golang.org/x/crypto/ssh/agent
+$ go get golang.org/x/crypto/ssh/terminal
 ```
