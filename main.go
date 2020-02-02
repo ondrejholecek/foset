@@ -41,7 +41,7 @@ func main() {
 	ipparams   := parser.List(  "i", "input-provider",  &argparse.Options{                    Help: "Parameters for input providers"})
 	threads    := parser.Int(   "t", "threads",  &argparse.Options{Default: runtime.NumCPU(), Help: "Number of paralel threads to run, defaults to number of available cores"})
 	loop       := parser.Int(   "l", "loop",     &argparse.Options{Default: 1,                Help: "Number of cycles to run, zero for infinite loop"})
-	loop_time  := parser.Int(   "",  "loop-time",&argparse.Options{Default: 1,                Help: "How often to run in cycle (seconds, including the execution time)"})
+	loop_time  := parser.Int(   "",  "loop-time",&argparse.Options{Default: 1,                Help: "How often to repeat the cycle (seconds, including the execution time)"})
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
 	parse_all  := parser.Flag(  "", "parse-all", &argparse.Options{Default: false,            Help: "Debugging: parse all fields regardless on filter and output"})
