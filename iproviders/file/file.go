@@ -14,14 +14,14 @@ type IProviderFile struct {
 	name    string
 }
 
-func Init(name, params string, custom_log loggo.Logger) (iprovider_common.IProvider) {
+func Init(name, params string, custom_log loggo.Logger) (iprovider_common.IProvider, error) {
 	log = custom_log
 	log.Debugf("Initializing with \"%s\" params", params)
 
 	ip := IProviderFile{
 		name: name,
 	}
-	return ip
+	return ip, nil
 }
 
 func (ip IProviderFile) Name() (string) {

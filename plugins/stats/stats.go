@@ -14,6 +14,7 @@ import (
 	"time"
 	"encoding/binary"
 	"sync/atomic"
+	"foset/common"
 	"foset/fortisession"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
@@ -89,7 +90,7 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	defaults := make(map[string]string)
 	defaults["srcprefix"] = "24"
 	defaults["dstprefix"] = "24"
-	dk, du, _ := plugin_common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force","transvdoms","transifaces"}, defaults)
+	dk, du, _ := common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force","transvdoms","transifaces"}, defaults)
 
 	// validate parameters
 	unknowns := make([]string, 0)
@@ -109,16 +110,6 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	directory, exists = dk["directory"]
 	if !exists {
 		return fmt.Errorf("parameter \"directory\" is mandatory")
-	}
-
-	// if the directory does not exist, we create it (_override = true)
-	// if the path exists and it is not a directory we return error
-	// otherwise the path exists and is a directory, so we don't override it
-	dstat, _ := os.Stat(directory)
-	if dstat == nil {
-		directory_override = true
-	} else if !dstat.IsDir() {
-		return fmt.Errorf("directory path \"%s\" is not a directory", directory)
 	}
 
 	// however, it the "force" parameter was specified, override it it anyway
@@ -169,12 +160,17 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 
 	// setup callbacks
 	var hooks plugin_common.Hooks
+	hooks.Start        = StartCycle
 	hooks.BeforeFilter = ProcessBeforeFilter
 	hooks.AfterFilter  = ProcessAfterFilter
 	hooks.Finished     = ProcessFinished
 
 	pluginInfo.Hooks = hooks
 
+	return nil
+}
+
+func initCounters() {
 	// initialize counters
 	tcpsrcports           = CounterInit("tcp_src_ports", WriteSimpleData)
 	tcpdstports           = CounterInit("tcp_dst_ports", WriteSimpleData)
@@ -239,7 +235,12 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	initDictUDPState();
 
 	//
-	return nil
+	count_total = 0
+	count_matched = 0
+}
+
+func StartCycle() {
+	initCounters()
 }
 
 func ProcessBeforeFilter(session *fortisession.Session) bool {
@@ -452,11 +453,24 @@ func ProcessAfterFilter(session *fortisession.Session) bool {
 // ProcessFinished is called when all the sessions are processed
 // and `foset` is about to terminate.
 func ProcessFinished() {
+	// we need to check the directory existence here, on order to
+	// not overwrite if running foset in loop
+	local_override := directory_override
+	dstat, _ := os.Stat(directory)
+	if dstat == nil {
+		log.Debugf("Directory \"%s\" does not exist, will be created", directory)
+		local_override = true
+	} else if !dstat.IsDir() {
+		log.Criticalf("directory path \"%s\" is not a directory", directory)
+		return
+	}
+
 	// if we are supposed to create/override the directory, do that
-	if directory_override {
+	if local_override {
 		log.Debugf("Overriding (or creating) directory \"%s\"", directory)
 		createDirectory(directory)
 	}
+
 	// open the JS data file inside the directory
 	f, err := os.OpenFile(path.Join(directory, "resources/data.js"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

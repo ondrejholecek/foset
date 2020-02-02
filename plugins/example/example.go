@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"strconv"
 	"encoding/binary"
+	"foset/common"
 	"foset/fortisession"
 	"foset/plugins/common"
 	"github.com/juju/loggo"
@@ -76,7 +77,7 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	// parse data parameters
 	defaults := make(map[string]string)
 	defaults["prefixlen"] = "24"
-	dk, du, dui := plugin_common.ExtractData(data, []string{"prefixlen","hide"}, defaults)
+	dk, du, dui := common.ExtractData(data, []string{"prefixlen","hide"}, defaults)
 
 	// validate parameters
 	if len(du) > 0 || len(dui) > 0 {

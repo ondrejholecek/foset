@@ -6,6 +6,7 @@ import (
 	"strings"
 	"foset/iproviders/common"
 	"foset/iproviders/file"
+	"foset/iproviders/ssh"
 	"github.com/juju/loggo"
 )
 
@@ -15,7 +16,7 @@ type IProviders struct {
 	iproviders []iprovider_common.IProvider
 }
 
-func Init(params []string, custom_log loggo.Logger) (*IProviders) {
+func Init(params []string, custom_log loggo.Logger) (*IProviders, error) {
 	log = custom_log
 
 	// create map of parameters
@@ -31,12 +32,24 @@ func Init(params []string, custom_log loggo.Logger) (*IProviders) {
 	}
 
 	// initialize known providers
+	// provider init function cab return nil and error -> we will display it and terminate
+	// it can also return nil and nil -> plugin wants to be disabled
 	ips   := IProviders {
 		iproviders : make([]iprovider_common.IProvider, 0),
 	}
-	ips.iproviders = append(ips.iproviders, iprovider_file.Init("file", pmap["file"], log.Child("file")))
 
-	return &ips
+	var p   iprovider_common.IProvider
+	var err error
+
+	p, err = iprovider_file.Init("file", pmap["file"], log.Child("file"))
+	if err != nil { return nil, fmt.Errorf("cannot initialize provider \"file\": %s", err) }
+	if p != nil   { ips.iproviders = append(ips.iproviders, p) }
+
+	p, err = iprovider_ssh.Init("ssh", pmap["ssh"], log.Child("ssh"))
+	if err != nil { return nil, fmt.Errorf("cannot initialize provider \"ssh\": %s", err) }
+	if p != nil   { ips.iproviders = append(ips.iproviders, p) }
+
+	return &ips, nil
 }
 
 func (ips *IProviders) Provide(name string) (io.Reader, error) {
@@ -60,7 +73,9 @@ func (ips *IProviders) Provide(name string) (io.Reader, error) {
 	}
 
 	if best_provider == nil {
-		return nil, fmt.Errorf("no provider found")
+		return nil, fmt.Errorf("no provider found for \"%s\"", name)
+	} else {
+		log.Debugf("selected provider \"%s\"", best_provider.Name())
 	}
 
 	// get stream from selected provider

@@ -19,6 +19,7 @@ import (
 	"bufio"
 	"strings"
 	"regexp"
+	"foset/common"
 	"foset/fortisession"
 	"foset/fortisession/multivalue"
 	"foset/plugins/common"
@@ -44,7 +45,7 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 
 	// parse data parameters
 	defaults := make(map[string]string)
-	dk, du, _ := plugin_common.ExtractData(data, []string{"vdoms","interfaces"}, defaults)
+	dk, du, _ := common.ExtractData(data, []string{"vdoms","interfaces"}, defaults)
 
 	// validate parameters
 	unknowns := make([]string, 0)

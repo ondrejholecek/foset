@@ -9,6 +9,7 @@ import (
 	"strings"
 	"bufio"
 	"strconv"
+	"foset/common"
 	"foset/fortisession"
 	"foset/fortisession/multivalue"
 	"foset/plugins/common"
@@ -43,7 +44,7 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	defaults["sep"] = " "
 	defaults["file"] = ""
 	defaults["key"] = "serial"
-	dk, du, dui := plugin_common.ExtractData(data, []string{"sep","file","key"}, defaults)
+	dk, du, dui := common.ExtractData(data, []string{"sep","file","key"}, defaults)
 //	fmt.Printf("known: %f\nunknown: %f\nunknown integers: %f\n", dk, du, dui)
 
 	// make sure all parameters are correct

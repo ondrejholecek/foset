@@ -23,6 +23,7 @@ type pluginHook int
 const (
 	PLUGINS_BEFORE_FILTER       pluginHook = iota
 	PLUGINS_AFTER_FILTER
+	PLUGINS_START
 	PLUGINS_FINISHED
 )
 
@@ -131,6 +132,8 @@ func run_plugins(plugins []*plugin_common.FosetPlugin, place pluginHook, session
 			r = plugin.Hooks.BeforeFilter(session)
 		} else if place == PLUGINS_AFTER_FILTER  && plugin.Hooks.AfterFilter  != nil {
 			r = plugin.Hooks.AfterFilter(session)
+		} else if place == PLUGINS_START         && plugin.Hooks.Finished     != nil {
+			plugin.Hooks.Start()
 		} else if place == PLUGINS_FINISHED      && plugin.Hooks.Finished     != nil {
 			plugin.Hooks.Finished()
 		}

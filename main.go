@@ -92,7 +92,12 @@ func main() {
 	fortisession.InitLog(log.Child("session"))
 
 	// input providers
-	inputs = iproviders.Init(*ipparams, log.Child("iproviders"))
+	var err error
+	inputs, err = iproviders.Init(*ipparams, log.Child("iproviders"))
+	if err != nil {
+		log.Criticalf("cannot initialize providers: %s", err)
+		os.Exit(100)
+	}
 
 	//
 	data_request := fortisession.SessionDataRequest {}
@@ -185,6 +190,7 @@ func main() {
 	for i := 0; i < *loop || *loop == 0; i++ {
 		log.Debugf("Starting next cycle")
 		start := time.Now()
+		run_plugins(plugins, PLUGINS_START, nil)
 
 		err := inputs.WaitReady()
 		if err != nil {
