@@ -138,7 +138,7 @@ func ProcessBeforeFilter(session *fortisession.Session) bool {
 
 // parsing functions
 func parseVdoms(filename string) error {
-	f, err := plugin.Inputs.Provide(filename)
+	f, _, err := plugin.Inputs.ProvideReader(filename)
 	if err != nil { return err }
 
 	re := regexp.MustCompile("^name=([^/]+).*?\\sindex=([0-9]+)")
@@ -174,7 +174,7 @@ func parseVdoms(filename string) error {
 }
 
 func parseInterfaces(filename string) error {
-	f, err := plugin.Inputs.Provide(filename)
+	f, _, err := plugin.Inputs.ProvideReader(filename)
 	if err != nil { return err }
 
 	// if=mgmt1 family=00 type=1 index=3 mtu=1500 link=0 master=0

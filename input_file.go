@@ -127,7 +127,7 @@ func (state *FileProcessing) Read_all_from_file(filename string, compression Com
 	var err    error
 
 	// use input provider
-	reader, err = inputs.Provide(filename)
+	reader, _, err = inputs.ProvideReader(filename)
 	if err != nil { return fmt.Errorf("cannot read session data: %s", err) }
 
 	// is the input somehow compressed?

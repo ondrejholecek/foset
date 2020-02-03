@@ -52,16 +52,60 @@ func Init(params []string, custom_log loggo.Logger) (*IProviders, error) {
 	return &ips, nil
 }
 
-func (ips *IProviders) Provide(name string) (io.Reader, error) {
-	log.Debugf("looking for input provider for \"%s\"", name)
+func (ips *IProviders) ProvideReader(name string) (io.Reader, *iprovider_common.ReaderParams, error) {
+	log.Debugf("looking for input provider reader for \"%s\"", name)
 
+	// find provider
+	provider, err := ips.findProvider(name, "r")
+	if err != nil {
+		return nil, nil, fmt.Errorf("find provider error: %s", err)
+	}
+
+	// get stream
+	resource, params, err := provider.ProvideReader(name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("provider reader \"%s\" error: %s", provider.Name(), err)
+	}
+
+	return resource, params, nil
+}
+
+func (ips *IProviders) ProvideWriter(name string) (io.Writer, *iprovider_common.WriterParams, error) {
+	log.Debugf("looking for input provider writer for \"%s\"", name)
+
+	// find provider
+	provider, err := ips.findProvider(name, "w")
+	if err != nil {
+		return nil, nil, fmt.Errorf("find provider error: %s", err)
+	}
+
+	// get stream
+	resource, params, err := provider.ProvideWriter(name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("provider writer \"%s\" error: %s", provider.Name(), err)
+	}
+
+	return resource, params, nil
+}
+
+func (ips *IProviders) findProvider(name string, r_or_w string) (iprovider_common.IProvider, error) {
 	// first find all possible providers and use the one
 	// with highest priority
 	var best_provider iprovider_common.IProvider
 	var best_priority int
 
 	for _, ip := range ips.iproviders {
-		can, prio := ip.CanProvide(name)
+		var can  bool
+		var prio int
+
+		if r_or_w == "r" {
+			can, prio = ip.CanProvideReader(name)
+		} else if r_or_w == "w" {
+			can, prio = ip.CanProvideWriter(name)
+		} else {
+			return nil, fmt.Errorf("r_or_w parameter must be either \"r\" or \"w\"")
+		}
+
 		if !can      { continue }
 		if prio <= 0 { continue }
 
@@ -78,14 +122,9 @@ func (ips *IProviders) Provide(name string) (io.Reader, error) {
 		log.Debugf("selected provider \"%s\"", best_provider.Name())
 	}
 
-	// get stream from selected provider
-	resource, err := best_provider.ProvideResource(name)
-	if err != nil {
-		return nil, fmt.Errorf("provider \"%s\" error: %s", best_provider.Name(), err)
-	}
-
-	return resource, nil
+	return best_provider, nil
 }
+
 
 func (ips *IProviders) WaitReady() (error) {
 	for _, ip := range ips.iproviders {

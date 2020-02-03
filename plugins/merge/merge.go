@@ -161,7 +161,7 @@ func ProcessSession(session *fortisession.Session) bool {
 
 
 func load_file(filename string, sep string, key_index int) (map[uint64][]*multivalue.MultiValue, error) {
-	f, err := plugin.Inputs.Provide(filename)
+	f, _, err := plugin.Inputs.ProvideReader(filename)
 	if err != nil { return nil, err }
 
 	data := make(map[uint64][]*multivalue.MultiValue)

@@ -141,15 +141,19 @@ func (ip IProviderSsh) WaitReady() (error) {
 	return nil
 }
 
-func (ip IProviderSsh) CanProvide(name string) (bool, int) {
+func (ip IProviderSsh) CanProvideReader(name string) (bool, int) {
 	if strings.HasPrefix(name, "ssh://") { return true, 100000 }
 
 	return false, 0
 }
 
-func (ip IProviderSsh) ProvideResource(name string) (io.Reader, error) {
+func (ip IProviderSsh) CanProvideWriter(name string) (bool, int) {
+	return false, 0
+}
+
+func (ip IProviderSsh) ProvideReader(name string) (io.Reader, *iprovider_common.ReaderParams, error) {
 	if !strings.HasPrefix(name, "ssh://") {
-		return nil, fmt.Errorf("cannot provide output for resource \"%s\"", name)
+		return nil, nil, fmt.Errorf("cannot provide output for resource \"%s\"", name)
 	}
 
 	name = name[len("ssh://"):]
@@ -163,7 +167,7 @@ func (ip IProviderSsh) ProvideResource(name string) (io.Reader, error) {
 	// break it into parts
 	parts := strings.Split(name, "/")
 	if len(parts) < 3 {
-		return nil, fmt.Errorf("invalid resources \"%s\"", name)
+		return nil, nil, fmt.Errorf("invalid resources \"%s\"", name)
 	}
 
 	vdom    := parts[0]
@@ -172,17 +176,26 @@ func (ip IProviderSsh) ProvideResource(name string) (io.Reader, error) {
 
 	log.Debugf("Parsed resource: vdom=%s, cmdtype=%s, cmd=%s", vdom, cmdtype, cmd)
 
+	var params iprovider_common.ReaderParams
+	params.IsTerminal = false
+
 	if cmdtype == "simple" {
-		return ip.getSimpleCommand(cmd, vdom)
+		reader, err := ip.getSimpleCommand(cmd, vdom)
+		return reader, &params, err
 
 	} else if cmdtype == "long" {
-		return ip.getLongCommand(cmd, vdom)
+		reader, err := ip.getLongCommand(cmd, vdom)
+		return reader, &params, err
 
 	} else {
-		return nil, fmt.Errorf("invalid command type \"%s\"", cmdtype)
+		return nil, nil, fmt.Errorf("invalid command type \"%s\"", cmdtype)
 	}
 
 	// never gets here
+}
+
+func (ip IProviderSsh) ProvideWriter(name string) (io.Writer, *iprovider_common.WriterParams, error) {
+	return nil, nil, fmt.Errorf("writer not implemented")
 }
 
 func (ip *IProviderSsh) keepAlive(idle float64) {

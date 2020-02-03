@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"bufio"
 	"os"
 	"foset/plugins/common"
@@ -21,6 +20,7 @@ type ExecuteParams struct {
 	conditioner   *forticonditioner.Condition
 	formatter     *fortiformatter.Formatter
 	plugins       []*plugin_common.FosetPlugin
+	outfile       string
 }
 
 func execute(ep ExecuteParams) {
@@ -39,11 +39,11 @@ func execute(ep ExecuteParams) {
 
 	} else if ep.cache_read {
 		session_cache, inerr = CacheInit(ep.sessionfile+ ".cache", "r", ep.threads)
-		go collect_sessions(parsed_sessions, ep.formatter, ep.conditioner, ep.plugins, all_sessions_collected, !(ep.nobuffer))
+		go collect_sessions(parsed_sessions, ep.formatter, ep.conditioner, ep.plugins, all_sessions_collected, ep.outfile, !(ep.nobuffer))
 		inerr = session_cache.ReadAll(parsed_sessions)
 
 	} else {
-		go collect_sessions(parsed_sessions, ep.formatter, ep.conditioner, ep.plugins, all_sessions_collected, !(ep.nobuffer))
+		go collect_sessions(parsed_sessions, ep.formatter, ep.conditioner, ep.plugins, all_sessions_collected, ep.outfile, !(ep.nobuffer))
 		file_processing := Init_file_processing(parsed_sessions, ep.data_request, ep.threads, ep.conditioner, ep.plugins)
 		inerr = file_processing.Read_all_from_file(ep.sessionfile, Compression { Gzip : ep.gzip_in })
 	}
@@ -70,21 +70,25 @@ func save_sessions(results chan *fortisession.Session, cache *CacheFile, conditi
 	done <- true
 }
 
-func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool, buffer bool) {
+func collect_sessions(results chan *fortisession.Session, formatter *fortiformatter.Formatter, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, done chan bool, outfile string, buffer bool) {
+	// where to write our output?
+	printer, wparams, err := inputs.ProvideWriter(outfile)
+	if err != nil {
+		log.Criticalf("Output stream error: %s", err)
+		os.Exit(100)
+	}
+
 	// prepare the buffer (even if it is not going to be used)
-	w := bufio.NewWriterSize(os.Stdout, 1024)
-	// is output terminal?
-	fi, _ := os.Stdout.Stat();
-	terminal := !(fi.Mode() & os.ModeCharDevice == 0)
+	w := bufio.NewWriterSize(printer, 1024)
 
 	//
 	for session := range results {
 		log.Tracef("Collecting session: %#x\n%#f", session.Serial, session)
 
-		if buffer && !terminal {
+		if buffer && !wparams.IsTerminal {
 			w.WriteString(formatter.Format(session) + "\n")
 		} else {
-			fmt.Println(formatter.Format(session))
+			printer.Write(append([]byte(formatter.Format(session)), []byte("\n")...))
 		}
 	}
 
