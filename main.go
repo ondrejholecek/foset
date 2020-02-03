@@ -190,7 +190,6 @@ func main() {
 	for i := 0; i < *loop || *loop == 0; i++ {
 		log.Debugf("Starting next cycle")
 		start := time.Now()
-		run_plugins(plugins, PLUGINS_START, nil)
 
 		err := inputs.WaitReady()
 		if err != nil {
@@ -198,16 +197,22 @@ func main() {
 			break
 		}
 
+		run_plugins(plugins, PLUGINS_START, nil)
 		execute(ep)
 		runtime.GC()
 
 		took  := time.Now().Sub(start)
+		log.Debugf("Last cycle took %.1f seconds", took.Seconds())
+
+		// prevent sleep after last cycle
+		if (i+1) >= *loop { continue }
+
 		sleep := time.Duration(*loop_time) * time.Duration(time.Second) - took
 		if sleep.Seconds() > 0 {
-			log.Debugf("Last cycle took %.1f seconds, will sleep for %.1f seconds", took.Seconds(), sleep.Seconds())
+			log.Debugf("Will sleep for %.1f seconds", took.Seconds(), sleep.Seconds())
 			time.Sleep(sleep)
 		} else {
-			log.Debugf("Last cycle took %.1f seconds, repeating immediately", took.Seconds())
+			log.Debugf("Cycle repeating immediately")
 		}
 	}
 }
