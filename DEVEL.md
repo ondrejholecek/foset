@@ -18,3 +18,9 @@ $ go get golang.org/x/crypto/ssh
 $ go get golang.org/x/crypto/ssh/agent
 $ go get golang.org/x/crypto/ssh/terminal
 ```
+
+### Necessary binary to build the go files from static data
+
+```
+$ go get -u github.com/shuLhan/go-bindata/...
+```
