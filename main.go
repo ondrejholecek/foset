@@ -207,7 +207,7 @@ func main() {
 		log.Debugf("Last cycle took %.1f seconds", took.Seconds())
 
 		// prevent sleep after last cycle
-		if (i+1) >= *loop { continue }
+		if (i+1) >= *loop && *loop > 0 { continue }
 
 		sleep := time.Duration(*loop_time) * time.Duration(time.Second) - took
 		if sleep.Seconds() > 0 {
