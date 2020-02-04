@@ -41,6 +41,11 @@ func (ip IProviderFile) CanProvideReader(name string) (bool, int) {
 	if name    == "-" { return true, 1000 }
 	if strings.HasPrefix(name, "file://") { return true, 100000 }
 
+	// this is default provider so return true anyway
+	if strings.Index(name, "://") == -1 {
+		return true, 100
+	}
+
 	return false, 0
 }
 
@@ -49,6 +54,11 @@ func (ip IProviderFile) CanProvideWriter(name string) (bool, int) {
 	if name[0] == '/' { return true, 1000 }
 	if name    == "-" { return true, 1000 }
 	if strings.HasPrefix(name, "file://") { return true, 100000 }
+
+	// this is default provider so return true anyway unless some schema is specified
+	if strings.Index(name, "://") == -1 {
+		return true, 100
+	}
 
 	return false, 0
 }
