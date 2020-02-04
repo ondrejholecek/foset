@@ -2,6 +2,7 @@ package iproviders
 
 import (
 	"io"
+	"bufio"
 	"fmt"
 	"strings"
 	"foset/iproviders/common"
@@ -86,6 +87,14 @@ func (ips *IProviders) ProvideWriter(name string) (io.Writer, *iprovider_common.
 	}
 
 	return resource, params, nil
+}
+
+func (ips *IProviders) ProvideBufferedWriter(name string) (io.Writer, *iprovider_common.WriterParams, error) {
+	writer, params, err := ips.ProvideWriter(name)
+	if err != nil { return writer, params, err }
+
+	bwriter := ThreadSafeWriterInit(bufio.NewWriter(writer))
+	return bwriter, params, nil
 }
 
 func (ips *IProviders) findProvider(name string, r_or_w string) (iprovider_common.IProvider, error) {

@@ -18,21 +18,43 @@ import (
 	"foset/fortisession/forticonditioner"
 )
 
-//
-func process_sessions(sq *safequeue.SafeQueue, results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool, total_count *uint64, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) {
+type Compression struct {
+	Gzip bool
+}
 
-	for sq.IsActive() {
+type FileProcessing struct {
+	threads  int
+	done     chan bool
+	sq       *safequeue.SafeQueue
+	progress io.Writer
+	rd_total uint64
+	rd_match uint64
+}
+
+
+//
+func (fp *FileProcessing) process_sessions(results chan *fortisession.Session, req *fortisession.SessionDataRequest, done chan bool, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) {
+
+	for fp.sq.IsActive() {
 		count := 0
-		for _, plain := range sq.Pop(128) {
+		for _, plain := range fp.sq.Pop(128) {
 			session := fortisession.Parse(plain, req)
 
-			atomic.AddUint64(total_count, 1)
-			if *total_count % 100000 == 0 {
-				log.Debugf("Processed %d sessions", *total_count)
+			// count all parsed sessions
+			atomic.AddUint64(&fp.rd_total, 1)
+			if fp.progress != nil {
+				fp.progress.Write([]byte(fmt.Sprintf("SFRS:%d\n", fp.rd_total)))
 			}
 
 			if run_plugins(plugins, PLUGINS_BEFORE_FILTER, session) { continue }
 			if conditioner != nil && !conditioner.Matches(session) { continue }
+
+			// count sessions matching filter
+			atomic.AddUint64(&fp.rd_match, 1)
+			if fp.progress != nil {
+				fp.progress.Write([]byte(fmt.Sprintf("SFMS:%d\n", fp.rd_match)))
+			}
+
 			if run_plugins(plugins, PLUGINS_AFTER_FILTER, session) { continue }
 
 			results <- session
@@ -91,52 +113,49 @@ func scanner_split(data []byte, atEOF bool) (advance int, token []byte, err erro
 	}
 }
 
-
-//
-
-type Compression struct {
-	Gzip bool
-}
-
-type FileProcessing struct {
-	threads int
-	done    chan bool
-	sq      *safequeue.SafeQueue
-}
-
-func Init_file_processing(results chan *fortisession.Session, req *fortisession.SessionDataRequest, threads int, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin) (*FileProcessing) {
+func Init_file_processing(results chan *fortisession.Session, req *fortisession.SessionDataRequest, threads int, conditioner *forticonditioner.Condition, plugins []*plugin_common.FosetPlugin, progfilename string) (*FileProcessing) {
 	done := make(chan bool, threads)
-	var count uint64
 
 	fp := FileProcessing {
-		threads: threads,
-		done   : done,
-		sq     : safequeue.Init(log.Child("safequeue")),
+		threads  : threads,
+		done     : done,
+		sq       : safequeue.Init(log.Child("safequeue")),
+	}
+
+	// if progress file name is specified, open it
+	if progfilename != "" {
+		var err error
+		fp.progress, _, err = inputs.ProvideBufferedWriter(progfilename)
+		if err != nil { log.Errorf("Cannot open progress file: %s", err) }
 	}
 
 	for i := 0; i < threads; i++ {
-		go process_sessions(fp.sq, results, req, done, &count, conditioner, plugins)
+		go fp.process_sessions(results, req, done, conditioner, plugins)
 	}
 
 	return &fp
 }
 
-func (state *FileProcessing) Read_all_from_file(filename string, compression Compression) (error) {
+func (fp *FileProcessing) Read_all_from_file(filename string, compression Compression) (error) {
 	// where to read the data from 
-	var reader io.Reader
-	var err    error
+	var reader  io.Reader
+	var creader *CountingReader
+	var err     error
 
 	// use input provider
 	reader, _, err = inputs.ProvideReader(filename)
 	if err != nil { return fmt.Errorf("cannot read session data: %s", err) }
+	creader = CountingReaderInit(reader)
 
 	// is the input somehow compressed?
 	if compression.Gzip {
-		tmp, err := gzip.NewReader(reader)
+		tmp, err := gzip.NewReader(creader)
 		if err != nil {
 			return fmt.Errorf("Source stream is not gzip compressed: %s", err)
 		}
 		reader = tmp
+	} else {
+		reader = creader
 	}
 
 	// add new line at the beggining
@@ -155,23 +174,30 @@ func (state *FileProcessing) Read_all_from_file(filename string, compression Com
 	// read the whole file, split it by session paragraphs and push those to "processing" queue
 	// gorutinesprocess_sessions will paralelly retrive that, convert to Session and push 
 	// "results" channel
+	var last_progress int
 	for scanner.Scan() {
+		// save progress if requested
+		if fp.progress != nil && last_progress != creader.BytesRead {
+			fp.progress.Write([]byte(fmt.Sprintf("SFRB:%d\n", creader.BytesRead)))
+			last_progress = creader.BytesRead
+		}
+
 		session := make([]byte, len(scanner.Bytes()))
 		copy(session, scanner.Bytes())
 		log.Tracef("Read session:\n%s\n---end---\n", session)
 		buf.PushBack(session)
 		if buf.Len() >= 1024 {
-			state.sq.Push(buf)
+			fp.sq.Push(buf)
 			buf = list.New()
 		}
 	}
-	if buf.Len() > 0 { state.sq.Push(buf) }
+	if buf.Len() > 0 { fp.sq.Push(buf) }
 
 	// Finish will wait for queue to get empty and them will deactivate it
-	state.sq.Finish()
+	fp.sq.Finish()
 	// and wait for all the workers to finish
-	for i := 0; i < state.threads; i++ {
-		<-state.done
+	for i := 0; i < fp.threads; i++ {
+		<-fp.done
 	}
 
 	return nil

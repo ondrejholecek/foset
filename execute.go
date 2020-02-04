@@ -21,6 +21,7 @@ type ExecuteParams struct {
 	formatter     *fortiformatter.Formatter
 	plugins       []*plugin_common.FosetPlugin
 	outfile       string
+	progfile      string
 }
 
 func execute(ep ExecuteParams) {
@@ -34,7 +35,7 @@ func execute(ep ExecuteParams) {
 		session_cache, inerr = CacheInit(ep.sessionfile+ ".cache", "w", ep.threads)
 		ep.data_request.Plain = false
 		go save_sessions(parsed_sessions, session_cache, ep.conditioner, ep.plugins, all_sessions_collected)
-		file_processing := Init_file_processing(parsed_sessions, ep.data_request, ep.threads, ep.conditioner, ep.plugins)
+		file_processing := Init_file_processing(parsed_sessions, ep.data_request, ep.threads, ep.conditioner, ep.plugins, ep.progfile)
 		inerr = file_processing.Read_all_from_file(ep.sessionfile, Compression { Gzip : ep.gzip_in })
 
 	} else if ep.cache_read {
@@ -44,7 +45,7 @@ func execute(ep ExecuteParams) {
 
 	} else {
 		go collect_sessions(parsed_sessions, ep.formatter, ep.conditioner, ep.plugins, all_sessions_collected, ep.outfile, !(ep.nobuffer))
-		file_processing := Init_file_processing(parsed_sessions, ep.data_request, ep.threads, ep.conditioner, ep.plugins)
+		file_processing := Init_file_processing(parsed_sessions, ep.data_request, ep.threads, ep.conditioner, ep.plugins, ep.progfile)
 		inerr = file_processing.Read_all_from_file(ep.sessionfile, Compression { Gzip : ep.gzip_in })
 	}
 

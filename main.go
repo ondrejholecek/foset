@@ -45,7 +45,8 @@ func main() {
 	nobuffer   := parser.Flag(  "n", "no-buffer",&argparse.Options{Default: false,            Help: "Disable output buffering"})
 	trace      := parser.Flag(  "", "trace",     &argparse.Options{Default: false,            Help: "Debugging: enable trace outputs"})
 	parse_all  := parser.Flag(  "", "parse-all", &argparse.Options{Default: false,            Help: "Debugging: parse all fields regardless on filter and output"})
-	outfile    := parser.String(  "", "output-file",&argparse.Options{Default: "-",           Help: "Where to write the output, \"-\" for stdout"})
+	outfile    := parser.String(  "", "output-file",   &argparse.Options{Default: "-",           Help: "Where to write the output, \"-\" for stdout"})
+	progfile   := parser.String(  "", "progress-file", &argparse.Options{Default: "",            Help: "Where to write the parsing progress data"})
 	profiler   := parser.String(  "", "profiler",&argparse.Options{Default: "",               Help: "Debugging: enable profiler (mem or cpu)"})
 	if err := parser.Parse(os.Args); err != nil {
 		fmt.Println(err)
@@ -186,6 +187,7 @@ func main() {
 		formatter      : formatter,
 		plugins        : plugins,
 		outfile        : *outfile,
+		progfile       : *progfile,
 	}
 
 
