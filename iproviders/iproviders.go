@@ -8,6 +8,7 @@ import (
 	"foset/iproviders/common"
 	"foset/iproviders/file"
 	"foset/iproviders/ssh"
+	"foset/iproviders/fd"
 	"github.com/juju/loggo"
 )
 
@@ -48,6 +49,10 @@ func Init(params []string, custom_log loggo.Logger) (*IProviders, error) {
 
 	p, err = iprovider_ssh.Init("ssh", pmap["ssh"], log.Child("ssh"))
 	if err != nil { return nil, fmt.Errorf("cannot initialize provider \"ssh\": %s", err) }
+	if p != nil   { ips.iproviders = append(ips.iproviders, p) }
+
+	p, err = iprovider_fd.Init("fd", pmap["fd"], log.Child("fd"))
+	if err != nil { return nil, fmt.Errorf("cannot initialize provider \"fd\": %s", err) }
 	if p != nil   { ips.iproviders = append(ips.iproviders, p) }
 
 	return &ips, nil
