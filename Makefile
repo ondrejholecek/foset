@@ -30,3 +30,14 @@ local:
 
 clean:
 	rm foset_macos foset_linux foset_windows.exe
+
+deb:
+	rm -rf debian_package
+	mkdir -p debian_package/DEBIAN
+	DEBIAN/control.sh >debian_package/DEBIAN/control
+	mkdir -p debian_package/usr/bin
+	GOOS=linux GOARCH=amd64 go build -o debian_package/usr/bin/foset $(LDFLAGS) *.go
+
+	dpkg-deb --root-owner-group --build debian_package foset-$(MAIN_VERSION).deb
+
+	rm -rf debian_package
