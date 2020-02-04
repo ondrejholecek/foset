@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"container/list"
 	"compress/gzip"
+	"foset/iproviders/common"
 	"foset/fortisession"
 	"foset/fortisession/safequeue"
 	"foset/plugins/common"
@@ -26,7 +27,8 @@ type FileProcessing struct {
 	threads  int
 	done     chan bool
 	sq       *safequeue.SafeQueue
-	progress io.Writer
+	progress       io.Writer
+	progressParams *iprovider_common.WriterParams
 	rd_total uint64
 	rd_match uint64
 }
@@ -125,7 +127,7 @@ func Init_file_processing(results chan *fortisession.Session, req *fortisession.
 	// if progress file name is specified, open it
 	if progfilename != "" {
 		var err error
-		fp.progress, _, err = inputs.ProvideBufferedWriter(progfilename)
+		fp.progress, fp.progressParams, err = inputs.ProvideBufferedWriter(progfilename)
 		if err != nil { log.Errorf("Cannot open progress file: %s", err) }
 	}
 
@@ -198,6 +200,10 @@ func (fp *FileProcessing) Read_all_from_file(filename string, compression Compre
 	// and wait for all the workers to finish
 	for i := 0; i < fp.threads; i++ {
 		<-fp.done
+	}
+	// flush progress file
+	if fp.progress != nil && fp.progressParams.Buffered != nil {
+		fp.progressParams.Buffered.Flush()
 	}
 
 	return nil

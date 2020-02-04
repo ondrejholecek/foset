@@ -98,7 +98,10 @@ func (ips *IProviders) ProvideBufferedWriter(name string) (io.Writer, *iprovider
 	writer, params, err := ips.ProvideWriter(name)
 	if err != nil { return writer, params, err }
 
-	bwriter := ThreadSafeWriterInit(bufio.NewWriter(writer))
+	buf := bufio.NewWriter(writer)
+	params.Buffered = buf
+
+	bwriter := ThreadSafeWriterInit(buf)
 	return bwriter, params, nil
 }
 

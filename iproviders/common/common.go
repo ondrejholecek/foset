@@ -2,6 +2,7 @@ package iprovider_common
 
 import (
 	"io"
+	"bufio"
 )
 
 type IProvider interface {
@@ -15,6 +16,7 @@ type IProvider interface {
 
 type WriterParams struct {
 	IsTerminal   bool
+	Buffered     *bufio.Writer
 }
 
 type ReaderParams struct {
