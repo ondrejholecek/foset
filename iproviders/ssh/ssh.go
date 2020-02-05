@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"regexp"
 	"time"
+	"syscall"
 	"foset/iproviders/common"
 	"foset/common"
 	"github.com/juju/loggo"
@@ -87,10 +88,10 @@ func Init(name, params string, custom_log loggo.Logger) (iprovider_common.IProvi
 	_, ask         := dk["ask"]
 
 	// are we supposed to ask for password on command line?
-	password  := dk["password"]
+	password := dk["password"]
 	if ask {
 		fmt.Printf("Enter SSH password for %s@%s (port %d) : ", dk["user"], host, port)
-		tmp, err := terminal.ReadPassword(0)
+		tmp, err := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Printf("\n")
 		if err != nil { return nil, fmt.Errorf("cannot read ssh password: %s", err) }
 		password = string(tmp)
