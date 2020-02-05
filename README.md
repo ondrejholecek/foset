@@ -30,7 +30,7 @@ These features can be easily used via the [Foset plugin system](/plugins).
 ## Data providers
 
 By default all input files are really files, but they don't have to be. By using a supported schema, input
-data can come from SSH session for example. 
+data can come from (automatic) SSH session for example. 
 
 Schemas look like the URLs and more information about supported schemas can be found in [Input providers](/iproviders)
 documentation.
