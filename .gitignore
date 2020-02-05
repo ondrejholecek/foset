@@ -14,7 +14,7 @@
 *.sw[a-p]
 
 # Debian packages
-*.deb
+/*.deb
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
