@@ -38,6 +38,8 @@ deb:
 	mkdir -p debian_package/usr/bin
 	GOOS=linux GOARCH=amd64 go build -o debian_package/usr/bin/foset $(LDFLAGS) *.go
 
-	dpkg-deb --root-owner-group --build debian_package foset-$(MAIN_VERSION).deb
+	mkdir -p $(RELEASE_DIR)/linux
+	dpkg-deb --root-owner-group --build debian_package $(RELEASE_DIR)/linux/foset-$(MAIN_VERSION).deb
+	cp $(RELEASE_DIR)/linux/foset-$(MAIN_VERSION).deb $(LATEST_DIR)/linux/foset-$(MAIN_VERSION).deb
 
 	rm -rf debian_package
