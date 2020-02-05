@@ -74,6 +74,9 @@ var dict_udp_session_state map[uint8]string
 var count_total    uint64  // all sessions
 var count_matched  uint64  // session matching filter
 
+// custom file name
+var filename  string
+
 //
 func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request *fortisession.SessionDataRequest, custom_log loggo.Logger) (error) {
 	// setup logging with custom name (to differentiate from other plugins)
@@ -90,7 +93,7 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	defaults := make(map[string]string)
 	defaults["srcprefix"] = "24"
 	defaults["dstprefix"] = "24"
-	dk, du, _ := common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force","transvdoms","transifaces"}, defaults)
+	dk, du, _ := common.ExtractData(data, []string{"srcprefix","dstprefix","complex","directory","force","transvdoms","transifaces","name"}, defaults)
 
 	// validate parameters
 	unknowns := make([]string, 0)
@@ -103,6 +106,10 @@ func InitPlugin(pluginInfo *plugin_common.FosetPlugin, data string, data_request
 	_, translate_vdoms      = dk["transvdoms"]
 	_, translate_interfaces = dk["transifaces"]
 
+	// custom name
+	filename = dk["name"]
+
+	//
 	var err error
 	var exists bool
 
@@ -483,7 +490,11 @@ func ProcessFinished() {
 	// and save all data to it. At the end we save it to the `foset` object using unique name.
 	fmt.Fprintf(f, "var current = Object()\n")
 	fmt.Fprintf(f, "current.info = Object()\n")
-	fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", path.Base(plugin.Filename))
+	if filename == "" {
+		fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", path.Base(plugin.Filename))
+	} else {
+		fmt.Fprintf(f, "current.info.filename         = \"%s\"\n", filename)
+	}
 	fmt.Fprintf(f, "current.info.filter           = \"%s\"\n", plugin.Filter)
 	fmt.Fprintf(f, "current.info.version          = \"%s\"\n", plugin.Version)
 	fmt.Fprintf(f, "current.info.commit           = \"%s\"\n", plugin.Commit)
