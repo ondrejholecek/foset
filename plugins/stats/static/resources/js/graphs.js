@@ -78,6 +78,9 @@ function get_horizontal_graph(ctx, labels, data, formatter, name) {
 			scales: {
 				xAxes: [{
 					display: false,
+					ticks: {
+						beginAtZero: true,
+  					}
 				}],
 				yAxes: [{
 					ticks: {
