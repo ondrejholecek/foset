@@ -123,8 +123,15 @@ func split_plugin_name_data(full string) (spec string, data string) {
 	return
 }
 
-func run_plugins(plugins []*plugin_common.FosetPlugin, place pluginHook, session *fortisession.Session) bool {
-	var ignore bool
+func run_plugins(plugins []*plugin_common.FosetPlugin, place pluginHook, session *fortisession.Session) (ignore bool) {
+
+	// Capture panic from plugin
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("Plugin error for session id %08x: %s\n", session.Serial, err)
+			ignore = true
+		}
+	}()
 
 	for _, plugin := range plugins {
 		var r bool
