@@ -907,6 +907,17 @@ func (f *Formatter) format_proto_state(proto uint16, state uint8) string {
 		if state == 0 { return "SEEN" }
 		if state == 1 { return "UNSEEN" }
 		return "UNKNOWN"
+	} else if proto == 132 {
+		if state ==  0 { return "NONE" }
+		if state ==  1 { return "ESTABLISHED" }
+		if state ==  2 { return "CLOSED" }
+		if state ==  3 { return "COOKIE_WAIT" }
+		if state ==  4 { return "COOKIE_ECHOED" }
+		if state ==  5 { return "SHUTDOWN_SENT" }
+		if state ==  6 { return "SHUTDOWN_RECD" }
+		if state ==  7 { return "SHUTDOWN_ACK_SENT" }
+		if state ==  8 { return "MAX" }
+		return "UNKNOWN"
 	} else {
 		return fmt.Sprintf("%d", state)
 	}
