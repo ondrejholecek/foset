@@ -875,6 +875,8 @@ func (f *Formatter) format_state(states []fortisession.State, mod string) string
 
 func (f *Formatter) format_proto_state(proto uint16, state uint8) string {
 	if proto == 6 {
+		// this is from Linux kernel but fortios seems to use different numbers
+		/*
 		if state ==  0 { return "NONE" }
 		if state ==  1 { return "ESTABLISHED" }
 		if state ==  2 { return "SYN_SENT" }
@@ -887,6 +889,19 @@ func (f *Formatter) format_proto_state(proto uint16, state uint8) string {
 		if state ==  9 { return "LAST_ACK" }
 		if state == 10 { return "LISTEN" }
 		if state == 11 { return "CLOSING" }
+		*/
+		// from https://kb.fortinet.com/kb/viewContent.do?externalId=FD30042
+		// partially validated (at least matches better than above)
+		if state ==  0 { return "NONE" }
+		if state ==  1 { return "ESTABLISHED" }
+		if state ==  2 { return "SYN_SENT" }
+		if state ==  3 { return "SYN_RECV" }
+		if state ==  4 { return "FIN_WAIT" }
+		if state ==  5 { return "TIME_WAIT" }
+		if state ==  6 { return "CLOSE" }
+		if state ==  7 { return "CLOSE_WAIT" }
+		if state ==  8 { return "LAST_ACK" }
+		if state ==  9 { return "LISTEN" }
 		return "UNKNOWN"
 	} else if proto == 17 {
 		if state == 0 { return "SEEN" }
