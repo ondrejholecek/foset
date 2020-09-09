@@ -1307,14 +1307,12 @@ func initDictTCPState() {
 	dict_tcp_session_state[1] = "ESTABLISHED"
 	dict_tcp_session_state[2] = "SYN_SENT"
 	dict_tcp_session_state[3] = "SYN_RECV"
-	dict_tcp_session_state[4] = "FIN_WAIT1"
-	dict_tcp_session_state[5] = "FIN_WAIT2"
-	dict_tcp_session_state[6] = "TIME_WAIT"
-	dict_tcp_session_state[7] = "CLOSE"
-	dict_tcp_session_state[8] = "CLOSE_WAIT"
-	dict_tcp_session_state[9] = "LAST_ACK"
-	dict_tcp_session_state[10] = "LISTEN"
-	dict_tcp_session_state[11] = "CLOSING"
+	dict_tcp_session_state[4] = "FIN_WAIT"
+	dict_tcp_session_state[5] = "TIME_WAIT"
+	dict_tcp_session_state[6] = "CLOSE"
+	dict_tcp_session_state[7] = "CLOSE_WAIT"
+	dict_tcp_session_state[8] = "LAST_ACK"
+	dict_tcp_session_state[9] = "LISTEN"
 }
 
 func initDictUDPState() {
